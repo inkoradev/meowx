@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logout Page</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: url('wallhaven-l8lkwp.jpg') no-repeat center center/cover;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .logout-container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            color: white;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            background-color: #007ACC;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #005A9C;
+        }
+    </style>
+</head>
+<body>
+    <div class="logout-container">
+        <h1>See you soon, bae <3</h1>
+        <button onclick="redirectToLogin()">Sign In</button>
+        <button onclick="redirectToDocumentation()">Documentation</button>
+    </div>
+
+    <script>
+        function redirectToLogin() {
+            window.location.href = "Index.html"; // Change to your login page file name
+        }
+        function redirectToDocumentation() {
+            window.location.href = "Documentation.html"; // Change to your login page file name
+        }
+    </script>
+</body>
+</html>

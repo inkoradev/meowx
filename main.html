@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terux</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #121212;
+            color: #FFFFFF;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .terminal {
+            width: 80%;
+            background-color: #1E1E1E;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .output {
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+        }
+
+        .input {
+            display: flex;
+        }
+
+        .input input {
+            flex: 1;
+            background-color: #121212;
+            color: #FFFFFF;
+            border: none;
+            outline: none;
+            padding: 10px;
+            font-family: monospace;
+        }
+
+        .input button {
+            background-color: #007ACC;
+            color: #FFFFFF;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+
+        .input button:hover {
+            background-color: #005A9C;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #333;
+        }
+
+        tr:nth-child(even) {
+            background-color: #2E2E2E;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="output" id="output">Linux-Style To-Do List</div>
+        <div class="input">
+            <input type="text" id="command" placeholder="Enter command">
+            <button onclick="executeCommand()">Execute</button>
+        </div>
+        <div id="table"></div>
+    </div>
+
+    <script>
+        let todoList = JSON.parse(localStorage.getItem('todoList')) || [];
+    
+        function saveToLocalStorage() {
+            localStorage.setItem('todoList', JSON.stringify(todoList));
+        }
+    
+        function renderTable() {
+            const tableDiv = document.getElementById('table');
+            if (todoList.length === 0) {
+                tableDiv.innerHTML = "<p>No tasks available.</p>";
+                return;
+            }
+    
+            let tableHTML = "<table><thead><tr><th>Sl. No.</th><th>Task</th><th>Due Date</th><th>Status</th></tr></thead><tbody>";
+            todoList.forEach((task, index) => {
+                tableHTML += `<tr><td>${index + 1}</td><td>${task.task}</td><td>${task.dueDate}</td><td>${task.status}</td></tr>`;
+            });
+            tableHTML += "</tbody></table>";
+            tableDiv.innerHTML = tableHTML;
+        }
+    
+        function getCurrentDate() {
+            const date = new Date();
+            return date.toISOString().split('T')[0];
+        }
+    
+        function executeCommand() {
+            const commandInput = document.getElementById('command');
+            const outputDiv = document.getElementById('output');
+            const command = commandInput.value.trim();
+            commandInput.value = '';
+    
+            if (command.startsWith("!add_task")) {
+                const taskName = command.split(/ (.+)/)[1];
+                if (taskName) {
+                    const dueDate = getCurrentDate();
+                    todoList.push({ task: taskName, dueDate: dueDate, status: 'Pending' });
+                    saveToLocalStorage();
+                    outputDiv.textContent = `Task added: ${taskName} (Due: ${dueDate})`;
+                } else {
+                    outputDiv.textContent = "Invalid command format. Use: !add_task <task>";
+                }
+            } else if (command.startsWith("!mark_done")) {
+                const args = command.split(" ");
+                const taskNumber = parseInt(args[1]) - 1;
+                if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
+                    todoList[taskNumber].status = 'Completed';
+                    saveToLocalStorage();
+                    outputDiv.textContent = `Task marked as completed: ${todoList[taskNumber].task}`;
+                } else {
+                    outputDiv.textContent = "Invalid task number.";
+                }
+            } else if (command.startsWith("!edit_task")) {
+                const args = command.split(/ (.+)/)[1]?.split(" ");
+                if (args && args.length >= 2) {
+                    const taskNumber = parseInt(args[0]) - 1;
+                    const newTaskName = args.slice(1).join(" ");
+                    if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
+                        todoList[taskNumber].task = newTaskName;
+                        saveToLocalStorage();
+                        outputDiv.textContent = `Task updated: ${newTaskName}`;
+                    } else {
+                        outputDiv.textContent = "Invalid task number.";
+                    }
+                } else {
+                    outputDiv.textContent = "Invalid command format. Use: !edit_task <task_number> <new_task>";
+                }
+            } else if (command === "!sort_tasks") {
+                todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                saveToLocalStorage();
+                outputDiv.textContent = "Tasks sorted by due date.";
+            } else if (command === "!show_tasks") {
+                renderTable();
+                return;
+            } else if (command === "!clear") {
+                todoList = [];
+                saveToLocalStorage();
+                outputDiv.textContent = "All tasks cleared.";
+            } else if (command.startsWith("!clear ")) {
+                const taskNumber = parseInt(command.split(" ")[1]) - 1;
+                if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
+                    const removedTask = todoList.splice(taskNumber, 1);
+                    saveToLocalStorage();
+                    outputDiv.textContent = `Task removed: ${removedTask[0].task}`;
+                } else {
+                    outputDiv.textContent = "Invalid task number.";
+                }
+            } else if (command === "!signout") {
+                window.location.href = "logout.html";  // Redirect to logout page
+                return; // Ensure no further code is executed
+            } else if (command === "!help") {
+                window.location.href = "Documentation.html";  // Redirect to help page
+                return; // Ensure no further code is executed
+            } else {
+                outputDiv.textContent = "Invalid command. Try again.";
+            }
+    
+            renderTable();
+        }
+    
+        renderTable();
+    </script>
+    
+</body>
+</html>

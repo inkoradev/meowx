@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List Commands</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: url('wallhaven-1p6xj9.jpg') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: rgb(75, 69, 69);
+            text-align: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.85); /* Increased opacity */
+            background: linear-gradient(to right, rgba(52, 51, 51, 0.8), rgba(0, 0, 0, 0.5));
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%; /* Adjusted width to be wider */
+            max-width: 800px; /* Increased max-width for more space */
+            height: 85%; /* Reduced height */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            overflow-y: auto; /* Allow scrolling if content overflows */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .title {
+            font-size: 30px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .description {
+            font-size: 16px;
+            color: #bbb5b5;
+            margin-bottom: 20px;
+        }
+
+        .commands {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-grow: 1;
+            margin-bottom: 30px; /* Space at the bottom */
+        }
+
+        .command {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .command-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0078d4;
+        }
+
+        .command-description {
+            font-size: 14px;
+            color: #333;
+            margin-top: 5px;
+        }
+
+        .command code {
+            background-color: #f5f5f5;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #0078d4;
+        }
+
+        .creator-section {
+            margin-top: 30px;
+            font-size: 16px;
+        }
+
+        .creator-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fcf9f9;
+            margin-bottom: 10px;
+        }
+
+        .creator-description {
+            font-size: 14px;
+            color: #fcf9f9;
+        }
+
+        .sign-in-button {
+            margin-top: 30px;
+            background-color: #0078d4;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none; /* Remove underline */
+            display: inline-block;
+        }
+
+        .sign-in-button:hover {
+            background-color: #005a9c;
+        }
+
+        /* Custom Scrollbar Style */
+        .container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .container::-webkit-scrollbar-thumb {
+            background: #0078d4;
+            border-radius: 10px;
+        }
+
+        .container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">To-Do List Commands</h1>
+        <p class="description">Here are some useful commands for your To-Do List:</p>
+
+        <div class="commands">
+            <div class="command">
+                <h2 class="command-title">!add_task &lt;task_name&gt;</h2>
+                <p class="command-description">Add a new task with the current date as the due date. Example: <code>!add_task Buy groceries</code></p>
+            </div>
+            <div class="command">
+                <h2 class="command-title">!mark_done &lt;task_number&gt;</h2>
+                <p class="command-description">Mark a task as completed. Example: <code>!mark_done 2</code></p>
+            </div>
+            <div class="command">
+                <h2 class="command-title">!edit_task &lt;task_number&gt; &lt;new_task_name&gt;</h2>
+                <p class="command-description">Edit an existing task. Example: <code>!edit_task 1 Finish homework</code></p>
+            </div>
+            <div class="command">
+                <h2 class="command-title">!sort_tasks</h2>
+                <p class="command-description">Sort tasks by due date. Example: <code>!sort_tasks</code></p>
+            </div>
+            <div class="command">
+                <h2 class="command-title">!show_tasks</h2>
+                <p class="command-description">Show tasks in a table. Example: <code>!show_tasks</code></p>
+            </div>
+            <div class="command">
+                <h2 class="command-title">!help</h2>
+                <p class="command-description">redirects you to the Documentation page. Example: <code>!help</code></p>
+            </div>
+            <div class="command">
+                <h2 class="command-title">!signout</h2>
+                <p class="command-description">Sign out from the website, but your data will be stored until you close the tab. Example: <code>!signout</code></p>
+            </div>
+        </div>
+
+        <div class="creator-section">
+            <h2 class="creator-title">About the Creator</h2>
+            <p class="creator-description">
+                Created by: <strong>Juman Deep Bharati</strong>.<br>
+                A passionate developer and a lover of clean design, bringing productivity tools to life.
+            </p>
+        </div>
+
+        <a href="Index.html" class="sign-in-button">Sign In</a>
+    </div>
+
+    <script>
+        // Optional: JavaScript for functionality (if needed in the future)
+    </script>
+</body>
+</html>
