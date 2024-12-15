@@ -186,16 +186,16 @@
                 window.location.href = "Documentation.html";  // Redirect to help page
                 return; // Ensure no further code is executed
             } else if (command === "!notes") {
-                window.location.href = "login.html";  // Redirect to notes page
+                window.open("login.html", "_blank")  // Redirect to notes page
                 return; // Ensure no further code is executed
             } else if (command === "!pomodoro") {
-                window.location.href = "https://inkoradev.netlify.app/";  // Replace with your desired URL
+                window.open("https://inkoradev.netlify.app/", "_blank")  // Replace with your desired URL
                 return; // Ensure no further code is executed
              } else if (command === "!weather") {
-                window.location.href = "https://inkoradev.github.io/weather/";  // Replace with your desired URL
+                window.open("https://inkoradev.github.io/weather/", "_blank")  // Replace with your desired URL
                 return; // Ensure no further code is executed
              } else if (command === "!blog") {
-                window.location.href = "https://inkoradev.github.io/user/";  // Replace with your desired URL
+                window.open("https://inkoradev.github.io/user/", "_blank")  // Replace with your desired URL
                 return; // Ensure no further code is executed
             } else {
                 outputDiv.textContent = "Invalid command. Try again.";
