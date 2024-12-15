@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termux | Notes</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: #1e1e1e;
+            color: #dcdcdc;
+            height: 100vh;
+            display: flex;
+        }
+
+        .app {
+            display: flex;
+            width: 100%;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #252526;
+            border-right: 1px solid #3c3c3c;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .folder-list, .note-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .folder-list li, .note-list li {
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #2d2d2d;
+            margin-bottom: 10px;
+            transition: background 0.2s;
+        }
+
+        .folder-list li:hover, .note-list li:hover, .folder-list li.active {
+            background: #3c3c3c;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .note-title {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            border: none;
+            border-bottom: 2px solid #3c3c3c;
+            background: #1e1e1e;
+            color: #ffffff;
+            outline: none;
+            padding: 5px 0;
+        }
+
+        .note-content {
+            flex-grow: 1;
+            font-size: 1rem;
+            border: none;
+            outline: none;
+            background: #1e1e1e;
+            color: #dcdcdc;
+            padding: 10px;
+            resize: none;
+            margin-top: 10px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .add-note, .add-folder {
+            background-color: #3a9ad9;
+            color: white;
+        }
+
+        .add-note:hover, .add-folder:hover {
+            background-color: #358bbf;
+        }
+
+        .delete-note {
+            background-color: #f14c4c;
+            color: white;
+        }
+
+        .delete-note:hover {
+            background-color: #d94343;
+        }
+
+        .delete-folder {
+    background-color: #f14c4c;
+    color: white;
+}
+.delete-folder:hover {
+    background-color: #d94343;
+}
+
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <h2>Folders</h2>
+            <button class="add-folder">+ Add Folder</button>
+            <button class="delete-folder">Delete Folder</button>
+            <ul class="folder-list"></ul>
+        </div>
+        <div class="sidebar">
+            <h2>Notes</h2>
+            <button class="add-note">+ Add Note</button>
+            <ul class="note-list"></ul>
+        </div>
+        <div class="main">
+            <input type="text" class="note-title" placeholder="Title...">
+            <textarea class="note-content" placeholder="Write your note here..."></textarea>
+            <div class="actions">
+                <button class="delete-note">Delete Note</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const folderList = document.querySelector('.folder-list');
+        const notesList = document.querySelector('.note-list');
+        const noteTitle = document.querySelector('.note-title');
+        const noteContent = document.querySelector('.note-content');
+        const addFolderButton = document.querySelector('.add-folder');
+        const addNoteButton = document.querySelector('.add-note');
+        const deleteNoteButton = document.querySelector('.delete-note');
+
+        let data = JSON.parse(localStorage.getItem('obsidianData')) || { folders: [], notes: [] };
+        let currentFolderId = null;
+        let currentNoteId = null;
+
+        function renderFolders() {
+            folderList.innerHTML = '';
+            data.folders.forEach(folder => {
+                const li = document.createElement('li');
+                li.textContent = folder.name || 'Untitled Folder';
+                li.dataset.id = folder.id;
+                li.classList.toggle('active', folder.id === currentFolderId);
+                li.addEventListener('click', () => selectFolder(folder.id));
+                folderList.appendChild(li);
+            });
+        }
+
+        function renderNotes() {
+            notesList.innerHTML = '';
+            if (!currentFolderId) return;
+            const notesInFolder = data.notes.filter(note => note.folderId === currentFolderId);
+            notesInFolder.forEach(note => {
+                const li = document.createElement('li');
+                li.textContent = note.title || 'Untitled Note';
+                li.dataset.id = note.id;
+                li.classList.toggle('active', note.id === currentNoteId);
+                li.addEventListener('click', () => selectNote(note.id));
+                notesList.appendChild(li);
+            });
+        }
+
+        function selectFolder(id) {
+            currentFolderId = id;
+            currentNoteId = null;
+            noteTitle.value = '';
+            noteContent.value = '';
+            renderFolders();
+            renderNotes();
+        }
+
+        function selectNote(id) {
+            const note = data.notes.find(n => n.id === id);
+            if (note) {
+                currentNoteId = id;
+                noteTitle.value = note.title;
+                noteContent.value = note.content;
+            }
+            renderNotes();
+        }
+
+        function saveNote() {
+            if (!currentFolderId) return;
+
+            if (currentNoteId) {
+                const note = data.notes.find(n => n.id === currentNoteId);
+                note.title = noteTitle.value;
+                note.content = noteContent.value;
+            } else {
+                const newNote = {
+                    id: Date.now(),
+                    folderId: currentFolderId,
+                    title: noteTitle.value,
+                    content: noteContent.value
+                };
+                data.notes.push(newNote);
+                currentNoteId = newNote.id;
+            }
+            localStorage.setItem('obsidianData', JSON.stringify(data));
+            renderNotes();
+        }
+
+        function addFolder() {
+            const newFolder = {
+                id: Date.now(),
+                name: `New Folder ${data.folders.length + 1}`
+            };
+            data.folders.push(newFolder);
+            localStorage.setItem('obsidianData', JSON.stringify(data));
+            renderFolders();
+        }
+        const deleteFolderButton = document.querySelector('.delete-folder');
+
+function deleteFolder() {
+    if (!currentFolderId) return;
+
+    // Confirm deletion
+    const confirmDelete = confirm('Are you sure you want to delete this folder and all its notes?');
+    if (!confirmDelete) return;
+
+    // Remove the folder
+    data.folders = data.folders.filter(folder => folder.id !== currentFolderId);
+    // Remove associated notes
+    data.notes = data.notes.filter(note => note.folderId !== currentFolderId);
+
+    // Reset current folder and note selection
+    currentFolderId = null;
+    currentNoteId = null;
+
+    // Save changes and re-render
+    localStorage.setItem('obsidianData', JSON.stringify(data));
+    renderFolders();
+    renderNotes();
+    noteTitle.value = '';
+    noteContent.value = '';
+}
+
+// Attach the event listener
+deleteFolderButton.addEventListener('click', deleteFolder);
+
+        function addNote() {
+            saveNote();
+            noteTitle.value = '';
+            noteContent.value = '';
+            currentNoteId = null;
+        }
+
+        function deleteNote() {
+            if (currentNoteId) {
+                data.notes = data.notes.filter(note => note.id !== currentNoteId);
+                localStorage.setItem('obsidianData', JSON.stringify(data));
+                noteTitle.value = '';
+                noteContent.value = '';
+                currentNoteId = null;
+                renderNotes();
+            }
+        }
+
+        noteTitle.addEventListener('input', saveNote);
+        noteContent.addEventListener('input', saveNote);
+        addFolderButton.addEventListener('click', addFolder);
+        addNoteButton.addEventListener('click', addNote);
+        deleteNoteButton.addEventListener('click', deleteNote);
+
+        renderFolders();
+        renderNotes();function renameFolder(folderId) {
+    const folder = data.folders.find(f => f.id === folderId);
+    if (folder) {
+        const newName = prompt('Enter new folder name:', folder.name);
+        if (newName && newName.trim() !== '') {
+            folder.name = newName.trim();
+            localStorage.setItem('obsidianData', JSON.stringify(data));
+            renderFolders();
+        }
+    }
+}
+
+function renderFolders() {
+    folderList.innerHTML = '';
+    data.folders.forEach(folder => {
+        const li = document.createElement('li');
+        li.textContent = folder.name || 'Untitled Folder';
+        li.dataset.id = folder.id;
+        li.classList.toggle('active', folder.id === currentFolderId);
+        li.addEventListener('click', () => selectFolder(folder.id));
+        li.addEventListener('dblclick', () => renameFolder(folder.id)); // Added double-click event
+        folderList.appendChild(li);
+    });
+}
+
+    </script>
+</body>
+</html>
