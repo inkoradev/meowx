@@ -93,18 +93,18 @@
 
     <script>
         let todoList = JSON.parse(localStorage.getItem('todoList')) || [];
-    
+
         function saveToLocalStorage() {
             localStorage.setItem('todoList', JSON.stringify(todoList));
         }
-    
+
         function renderTable() {
             const tableDiv = document.getElementById('table');
             if (todoList.length === 0) {
                 tableDiv.innerHTML = "<p>No tasks available.</p>";
                 return;
             }
-    
+
             let tableHTML = "<table><thead><tr><th>Sl. No.</th><th>Task</th><th>Due Date</th><th>Status</th></tr></thead><tbody>";
             todoList.forEach((task, index) => {
                 tableHTML += `<tr><td>${index + 1}</td><td>${task.task}</td><td>${task.dueDate}</td><td>${task.status}</td></tr>`;
@@ -112,18 +112,24 @@
             tableHTML += "</tbody></table>";
             tableDiv.innerHTML = tableHTML;
         }
-    
+        document.getElementById('command').addEventListener('keypress', function (event) {
+    if (event.key === 'Enter') {
+        executeCommand();
+    }
+});
+
+
         function getCurrentDate() {
             const date = new Date();
             return date.toISOString().split('T')[0];
         }
-    
+
         function executeCommand() {
             const commandInput = document.getElementById('command');
             const outputDiv = document.getElementById('output');
             const command = commandInput.value.trim();
             commandInput.value = '';
-    
+
             if (command.startsWith("!add_task")) {
                 const taskName = command.split(/ (.+)/)[1];
                 if (taskName) {
@@ -135,8 +141,7 @@
                     outputDiv.textContent = "Invalid command format. Use: !add_task <task>";
                 }
             } else if (command.startsWith("!mark_done")) {
-                const args = command.split(" ");
-                const taskNumber = parseInt(args[1]) - 1;
+                const taskNumber = parseInt(command.split(" ")[1]) - 1;
                 if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
                     todoList[taskNumber].status = 'Completed';
                     saveToLocalStorage();
@@ -159,26 +164,20 @@
                 } else {
                     outputDiv.textContent = "Invalid command format. Use: !edit_task <task_number> <new_task>";
                 }
-            } else if (command === "!sort_tasks") {
-                todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-                saveToLocalStorage();
-                outputDiv.textContent = "Tasks sorted by due date.";
+            } else if (command.startsWith("!change_date")) {
+                const args = command.split(" ");
+                const taskNumber = parseInt(args[1]) - 1;
+                const newDueDate = args[2];
+                if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length && newDueDate) {
+                    todoList[taskNumber].dueDate = newDueDate;
+                    saveToLocalStorage();
+                    outputDiv.textContent = `Due date updated: Task ${taskNumber + 1} is now due on ${newDueDate}`;
+                } else {
+                    outputDiv.textContent = "Invalid command format or task number. Use: !change_date <task_number> <new_due_date>";
+                }
             } else if (command === "!show_tasks") {
                 renderTable();
                 return;
-            } else if (command === "!clear") {
-                todoList = [];
-                saveToLocalStorage();
-                outputDiv.textContent = "All tasks cleared.";
-            } else if (command.startsWith("!clear ")) {
-                const taskNumber = parseInt(command.split(" ")[1]) - 1;
-                if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
-                    const removedTask = todoList.splice(taskNumber, 1);
-                    saveToLocalStorage();
-                    outputDiv.textContent = `Task removed: ${removedTask[0].task}`;
-                } else {
-                    outputDiv.textContent = "Invalid task number.";
-                }
             } else if (command === "!signout") {
                 window.location.href = "logout.html";  // Redirect to logout page
                 return; // Ensure no further code is executed
@@ -206,12 +205,11 @@
             } else {
                 outputDiv.textContent = "Invalid command. Try again.";
             }
-    
+
             renderTable();
         }
-    
+
         renderTable();
     </script>
-    
 </body>
 </html>
