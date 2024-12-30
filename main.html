@@ -185,6 +185,15 @@
         } else {
             outputDiv.textContent = "No tasks to clear.";
         }
+            } else if (command.startsWith("!clear_task")) {
+        const taskNumber = parseInt(command.split(" ")[1]) - 1;
+        if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
+            const removedTask = todoList.splice(taskNumber, 1);
+            saveToLocalStorage();
+            outputDiv.textContent = `Task cleared: ${removedTask[0].task}`;
+        } else {
+            outputDiv.textContent = "Invalid task number.";
+        }
             } else if (command === "!show_tasks") {
                 renderTable();
                 return;
