@@ -175,6 +175,17 @@
                 } else {
                     outputDiv.textContent = "Invalid command format or task number. Use: !change_date <task_number> <new_due_date>";
                 }
+            if (command.startsWith("!clear_task")) {
+    const args = command.split(" ");
+    const taskNumber = parseInt(args[1]) - 1;
+    if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
+        const removedTask = todoList.splice(taskNumber, 1);
+        saveToLocalStorage();
+        outputDiv.textContent = `Task removed: ${removedTask[0].task}`;
+    } else {
+        outputDiv.textContent = "Invalid task number. Use: !clear_task <task_number>";
+    }
+}
             } else if (command === "!show_tasks") {
                 renderTable();
                 return;
