@@ -175,17 +175,22 @@
                 } else {
                     outputDiv.textContent = "Invalid command format or task number. Use: !change_date <task_number> <new_due_date>";
                 }
-           else if (command.startsWith("!clear_task")) {
+           } else if (command.startsWith("!clear_task")) {
     const args = command.split(" ");
-    const taskNumber = parseInt(args[1]) - 1;
-    if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
-        const removedTask = todoList.splice(taskNumber, 1);
-        saveToLocalStorage();
-        outputDiv.textContent = `Task removed: ${removedTask[0].task}`;
+    if (args.length === 2) {
+        const taskNumber = parseInt(args[1], 10) - 1; // Convert task number to zero-based index
+        if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
+            const removedTask = todoList.splice(taskNumber, 1);
+            saveToLocalStorage();
+            outputDiv.textContent = `Task removed: ${removedTask[0].task}`;
+        } else {
+            outputDiv.textContent = "Invalid task number. Use: !clear_task <task_number>";
+        }
     } else {
-        outputDiv.textContent = "Invalid task number. Use: !clear_task <task_number>";
+        outputDiv.textContent = "Invalid command format. Use: !clear_task <task_number>";
     }
 }
+
             } else if (command === "!clear") {
         if (todoList.length > 0) {
             todoList = [];
