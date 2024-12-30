@@ -186,6 +186,14 @@
         outputDiv.textContent = "Invalid task number. Use: !clear_task <task_number>";
     }
 }
+            } else if (command === "!clear") {
+        if (todoList.length > 0) {
+            todoList = [];
+            saveToLocalStorage();
+            outputDiv.textContent = "All tasks cleared.";
+        } else {
+            outputDiv.textContent = "No tasks to clear.";
+        }
             } else if (command === "!show_tasks") {
                 renderTable();
                 return;
