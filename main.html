@@ -149,6 +149,10 @@
                 } else {
                     outputDiv.textContent = "Invalid task number.";
                 }
+                } else if (command === "!sort_tasks") {
+            todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            saveToLocalStorage();
+            outputDiv.textContent = "Tasks sorted by due date.";
             } else if (command.startsWith("!edit_task")) {
                 const args = command.split(/ (.+)/)[1]?.split(" ");
                 if (args && args.length >= 2) {
