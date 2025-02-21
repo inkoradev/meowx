@@ -105,7 +105,7 @@
         function renderTable() {
             const tableDiv = document.getElementById('table');
             if (todoList.length === 0) {
-                tableDiv.innerHTML = "<p>No tasks available.</p>";
+                tableDiv.innerHTML = "<p>No tasks available. Use !help</p>";
                 return;
             }
 
@@ -230,7 +230,7 @@
                 window.open("https://termuxlinks.netlify.app/", "_blank")  // Replace with your desired URL
                 return; // Ensure no further code is executed
             } else {
-                outputDiv.textContent = "Invalid command. Try again.";
+                outputDiv.textContent = "Invalid command. Try again. Use !help";
             }
 
             renderTable();
