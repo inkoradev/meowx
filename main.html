@@ -142,19 +142,19 @@
         let todoList = JSON.parse(localStorage.getItem('todoList')) || [];
         let commandHistory = [];
         let historyIndex = -1;
-
+    
         // Random quotes for the !quote command
         const quotes = [
             "The best way to predict the future is to create it. – Peter Drucker",
             "Do what you can, with what you have, where you are. – Theodore Roosevelt",
             "Success is not final, failure is not fatal: It is the courage to continue that counts. – Winston Churchill"
         ];
-
+    
         // Save todo list to localStorage
         function saveToLocalStorage() {
             localStorage.setItem('todoList', JSON.stringify(todoList));
         }
-
+    
         // Render the todo list as a table
         function renderTable() {
             const tableDiv = document.getElementById('table');
@@ -162,7 +162,7 @@
                 tableDiv.innerHTML = "<p class='command-output'>No tasks available. Use !help</p>";
                 return;
             }
-
+    
             let tableHTML = "<table><thead><tr><th>Sl. No.</th><th>Task</th><th>Due Date</th><th>Status</th></tr></thead><tbody>";
             todoList.forEach((task, index) => {
                 tableHTML += `<tr><td>${index + 1}</td><td>${task.task}</td><td>${task.dueDate}</td><td>${task.status}</td></tr>`;
@@ -170,7 +170,7 @@
             tableHTML += "</tbody></table>";
             tableDiv.innerHTML = tableHTML;
         }
-
+    
         // Typing animation function
         function typeText(element, text, delay = 5) {
             let index = 0;
@@ -183,7 +183,7 @@
                 }
             }, delay);
         }
-
+    
         // Handle command history navigation
         document.getElementById('command').addEventListener('keydown', function (event) {
             if (event.key === 'ArrowUp') {
@@ -203,22 +203,22 @@
                 event.preventDefault();
             }
         });
-
+    
         // Execute commands
         function executeCommand() {
             const commandInput = document.getElementById('command');
             const outputDiv = document.getElementById('output');
             const command = commandInput.value.trim();
             commandInput.value = '';
-
+    
             if (command) {
                 commandHistory.push(command);
                 historyIndex = -1;
             }
-
+    
             // Clear the output before typing new content
             outputDiv.innerHTML = '';
-
+    
             if (command.startsWith("!add_task")) {
                 const taskName = command.split(/ (.+)/)[1];
                 if (taskName) {
@@ -229,6 +229,93 @@
                 } else {
                     typeText(outputDiv, `Invalid command format. Use: !add_task <task>\n`);
                 }
+            } else if (command.startsWith("!mark_done")) {
+                const taskNumber = parseInt(command.split(/ (.+)/)[1]);
+                if (taskNumber && taskNumber <= todoList.length) {
+                    todoList[taskNumber - 1].status = 'Completed';
+                    saveToLocalStorage();
+                    typeText(outputDiv, `Task ${taskNumber} marked as completed.\n`);
+                } else {
+                    typeText(outputDiv, `Invalid task number. Use: !mark_done <task_number>\n`);
+                }
+            } else if (command === "!sort_tasks") {
+                todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                saveToLocalStorage();
+                typeText(outputDiv, `Tasks sorted by due date.\n`);
+            } else if (command.startsWith("!edit_task")) {
+                const parts = command.split(/ (.+)/)[1].split(' ');
+                const taskNumber = parseInt(parts[0]);
+                const newTask = parts.slice(1).join(' ');
+                if (taskNumber && taskNumber <= todoList.length && newTask) {
+                    todoList[taskNumber - 1].task = newTask;
+                    saveToLocalStorage();
+                    typeText(outputDiv, `Task ${taskNumber} updated to: ${newTask}\n`);
+                } else {
+                    typeText(outputDiv, `Invalid command format. Use: !edit_task <task_number> <new_task>\n`);
+                }
+            } else if (command.startsWith("!change_date")) {
+                const parts = command.split(/ (.+)/)[1].split(' ');
+                const taskNumber = parseInt(parts[0]);
+                const newDueDate = parts[1];
+                if (taskNumber && taskNumber <= todoList.length && newDueDate) {
+                    todoList[taskNumber - 1].dueDate = newDueDate;
+                    saveToLocalStorage();
+                    typeText(outputDiv, `Due date for task ${taskNumber} changed to: ${newDueDate}\n`);
+                } else {
+                    typeText(outputDiv, `Invalid command format. Use: !change_date <task_number> <new_due_date>\n`);
+                }
+            } else if (command === "!clear") {
+                todoList = [];
+                saveToLocalStorage();
+                typeText(outputDiv, `All tasks cleared.\n`);
+            } else if (command.startsWith("!clear_task")) {
+                const taskNumber = parseInt(command.split(/ (.+)/)[1]);
+                if (taskNumber && taskNumber <= todoList.length) {
+                    todoList.splice(taskNumber - 1, 1);
+                    saveToLocalStorage();
+                    typeText(outputDiv, `Task ${taskNumber} cleared.\n`);
+                } else {
+                    typeText(outputDiv, `Invalid task number. Use: !clear_task <task_number>\n`);
+                }
+            } else if (command === "!show_tasks") {
+                if (todoList.length === 0) {
+                    typeText(outputDiv, `No tasks available.\n`);
+                } else {
+                    typeText(outputDiv, `Current tasks:\n`);
+                    renderTable();
+                }
+            } else if (command === "!clear_terminal") {
+                outputDiv.innerHTML = '';
+            } else if (command === "!date") {
+                const date = new Date().toLocaleString();
+                typeText(outputDiv, `Current date and time: ${date}\n`);
+            } else if (command === "!quote") {
+                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                typeText(outputDiv, `${randomQuote}\n`);
+            } else if (command.startsWith("!calc")) {
+                const expression = command.split(/ (.+)/)[1];
+                try {
+                    const result = eval(expression);
+                    typeText(outputDiv, `Result: ${result}\n`);
+                } catch (e) {
+                    typeText(outputDiv, `Invalid expression. Use: !calc <expression>\n`);
+                }
+            } else if (command.startsWith("!theme")) {
+                const theme = command.split(/ (.+)/)[1];
+                if (theme === "light") {
+                    document.body.style.backgroundColor = '#FFFFFF';
+                    document.body.style.color = '#000000';
+                    typeText(outputDiv, `Switched to light theme.\n`);
+                } else if (theme === "dark") {
+                    document.body.style.backgroundColor = '#25272b';
+                    document.body.style.color = '#D8DEE9';
+                    typeText(outputDiv, `Switched to dark theme.\n`);
+                } else {
+                    typeText(outputDiv, `Invalid theme. Use: !theme <light/dark>\n`);
+                }
+            } else if (command === "!rickroll") {
+                window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+                typeText(outputDiv, `Never gonna give you up...\n`);
             } else if (command === "!neofetch") {
                 const neofetchOutput = `
                 <div class="neofetch-container">
@@ -271,10 +358,10 @@
             } else {
                 typeText(outputDiv, `Invalid command. Try again. Use !help\n`);
             }
-
+    
             renderTable();
         }
-
+    
         // Initialize table and event listeners
         renderTable();
         document.getElementById('command').addEventListener('keypress', function (event) {
