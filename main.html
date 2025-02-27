@@ -22,10 +22,8 @@
         .terminal {
             width: 80%;
             background-color: #25272b;
-            /*background-color: #3B4252;*/
             padding: 20px;
             border-radius: 5px;
-            /*box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);*/
         }
 
         .output {
@@ -91,6 +89,40 @@
             background-color: #000;
             color: #0F0;
         }
+
+        .neofetch-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background-color: #25272b;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .neofetch-image {
+            width: 150px;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .neofetch-info {
+            color: #D8DEE9;
+            font-family: monospace;
+            white-space: pre;
+        }
+
+        /* Blinking cursor effect */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .input .prompt::after {
+            content: "▌";
+            animation: blink 1s infinite;
+            color: #81A1C1;
+        }
     </style>
 </head>
 <body>
@@ -139,6 +171,19 @@
             tableDiv.innerHTML = tableHTML;
         }
 
+        // Typing animation function
+        function typeText(element, text, delay = 5) {
+            let index = 0;
+            const interval = setInterval(() => {
+                if (index < text.length) {
+                    element.innerHTML += text.charAt(index);
+                    index++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, delay);
+        }
+
         // Handle command history navigation
         document.getElementById('command').addEventListener('keydown', function (event) {
             if (event.key === 'ArrowUp') {
@@ -171,114 +216,38 @@
                 historyIndex = -1;
             }
 
+            // Clear the output before typing new content
+            outputDiv.innerHTML = '';
+
             if (command.startsWith("!add_task")) {
                 const taskName = command.split(/ (.+)/)[1];
                 if (taskName) {
                     const dueDate = new Date().toISOString().split('T')[0];
                     todoList.push({ task: taskName, dueDate: dueDate, status: 'Pending' });
                     saveToLocalStorage();
-                    outputDiv.innerHTML += `<br><span class="command-output">Task added: ${taskName} (Due: ${dueDate})</span>`;
+                    typeText(outputDiv, `Task added: ${taskName} (Due: ${dueDate})\n`);
                 } else {
-                    outputDiv.innerHTML += `<br><span class="error-output">Invalid command format. Use: !add_task <task></span>`;
+                    typeText(outputDiv, `Invalid command format. Use: !add_task <task>\n`);
                 }
-            } else if (command.startsWith("!mark_done")) {
-                const taskNumber = parseInt(command.split(" ")[1]) - 1;
-                if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
-                    todoList[taskNumber].status = 'Completed';
-                    saveToLocalStorage();
-                    outputDiv.innerHTML += `<br><span class="command-output">Task marked as completed: ${todoList[taskNumber].task}</span>`;
-                } else {
-                    outputDiv.innerHTML += `<br><span class="error-output">Invalid task number.</span>`;
-                }
-            } else if (command === "!sort_tasks") {
-                todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-                saveToLocalStorage();
-                outputDiv.innerHTML += `<br><span class="command-output">Tasks sorted by due date.</span>`;
-            } else if (command.startsWith("!edit_task")) {
-                const args = command.split(/ (.+)/)[1]?.split(" ");
-                if (args && args.length >= 2) {
-                    const taskNumber = parseInt(args[0]) - 1;
-                    const newTaskName = args.slice(1).join(" ");
-                    if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
-                        todoList[taskNumber].task = newTaskName;
-                        saveToLocalStorage();
-                        outputDiv.innerHTML += `<br><span class="command-output">Task updated: ${newTaskName}</span>`;
-                    } else {
-                        outputDiv.innerHTML += `<br><span class="error-output">Invalid task number.</span>`;
-                    }
-                } else {
-                    outputDiv.innerHTML += `<br><span class="error-output">Invalid command format. Use: !edit_task <task_number> <new_task></span>`;
-                }
-            } else if (command.startsWith("!change_date")) {
-                const args = command.split(" ");
-                const taskNumber = parseInt(args[1]) - 1;
-                const newDueDate = args[2];
-                if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length && newDueDate) {
-                    todoList[taskNumber].dueDate = newDueDate;
-                    saveToLocalStorage();
-                    outputDiv.innerHTML += `<br><span class="command-output">Due date updated: Task ${taskNumber + 1} is now due on ${newDueDate}</span>`;
-                } else {
-                    outputDiv.innerHTML += `<br><span class="error-output">Invalid command format or task number. Use: !change_date <task_number> <new_due_date></span>`;
-                }
-            } else if (command === "!clear") {
-                if (todoList.length > 0) {
-                    todoList = [];
-                    saveToLocalStorage();
-                    outputDiv.innerHTML += `<br><span class="command-output">All tasks cleared.</span>`;
-                } else {
-                    outputDiv.innerHTML += `<br><span class="error-output">No tasks to clear.</span>`;
-                }
-            } else if (command.startsWith("!clear_task")) {
-                const taskNumber = parseInt(command.split(" ")[1]) - 1;
-                if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
-                    const removedTask = todoList.splice(taskNumber, 1);
-                    saveToLocalStorage();
-                    outputDiv.innerHTML += `<br><span class="command-output">Task cleared: ${removedTask[0].task}</span>`;
-                } else {
-                    outputDiv.innerHTML += `<br><span class="error-output">Invalid task number.</span>`;
-                }
-            } else if (command === "!show_tasks") {
-                renderTable();
-                return;
-            } else if (command === "!clear_terminal") {
-                outputDiv.innerHTML = '';
-            } else if (command === "!date") {
-                const now = new Date();
-                outputDiv.innerHTML += `<br><span class="command-output">Current date and time: ${now.toLocaleString()}</span>`;
-            } else if (command === "!quote") {
-                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-                outputDiv.innerHTML += `<br><span class="command-output">${randomQuote}</span>`;
-            } else if (command.startsWith("!calc")) {
-                const expression = command.split(" ")[1];
-                try {
-                    const result = eval(expression); // Be cautious with eval in production
-                    outputDiv.innerHTML += `<br><span class="command-output">Result: ${result}</span>`;
-                } catch (e) {
-                    outputDiv.innerHTML += `<br><span class="error-output">Invalid expression.</span>`;
-                }
-            } else if (command === "!theme light") {
-                document.body.style.backgroundColor = "#FFFFFF";
-                document.body.style.color = "#000000";
-                outputDiv.innerHTML += `<br><span class="command-output">Switched to light theme.</span>`;
-            } else if (command === "!theme dark") {
-                document.body.style.backgroundColor = "#2E3440";
-                document.body.style.color = "#D8DEE9";
-                outputDiv.innerHTML += `<br><span class="command-output">Switched to dark theme.</span>`;
-            } else if (command === "!matrix") {
-                document.body.classList.add('matrix');
-                outputDiv.innerHTML += `<br><span class="command-output">Welcome to the Matrix...</span>`;
-            } else if (command === "!rickroll") {
-                window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
-            } else if (command === "!about") {
-                 const aboutText = `
-                    Termux Terminal (Simulated)
-                    Version: 1.5.0
-                    Description: A simulated terminal for task management and fun commands.
-                    Created by: <a href="https://jeffvscblogs.github.io/home/about.html" target="_blank" style="color: #81A1C1;">@Jeffvsc</a>
-                    Know more:  <a href="https://jeffvscblogs.github.io/home/Projects.html" target="_blank" style="color: #81A1C1;">Projects</a>
+            } else if (command === "!neofetch") {
+                const neofetchOutput = `
+                <div class="neofetch-container">
+                    <img src="https://i.ibb.co/HTzFG28g/image-removebg-preview.png" alt="Neofetch Image" class="neofetch-image">
+                    <div class="neofetch-info">
+                        <pre>
+                            Termux Terminal (Simulated)
+                            Version: 1.5.0
+                            Description: willbeavailablesoon
+                            Created by: <a href="https://jeffvscblogs.github.io/home/about.html" target="_blank" style="color: #81A1C1;">@Jeffvsc</a>
+                            Know more:  <a href="https://jeffvscblogs.github.io/home/Projects.html" target="_blank" style="color: #81A1C1;">Projects</a>
+                            Resolution: 1920x1080
+                            WM Theme: Adwaita
+                            Memory: localhost
+                        </pre>
+                    </div>
+                </div>
                 `;
-                outputDiv.innerHTML += `<br><span class="command-output">${aboutText}</span>`;
-
+                outputDiv.innerHTML += neofetchOutput; // No typing animation for images
             } else if (command === "!help") {
                 const helpText = `
                 Available Commands:
@@ -296,11 +265,11 @@
                 - !calc <expression>: Perform a calculation.
                 - !theme <light/dark>: Switch between light and dark themes.
                 - !rickroll: Rickroll yourself.
-                - !about: Know more about creator and its version
+                - !neofetch: Display system information and an image.
                 `;
-                outputDiv.innerHTML += `<br><span class="command-output">${helpText}</span>`;
+                typeText(outputDiv, helpText);
             } else {
-                outputDiv.innerHTML += `<br><span class="error-output">Invalid command. Try again. Use !help</span>`;
+                typeText(outputDiv, `Invalid command. Try again. Use !help\n`);
             }
 
             renderTable();
@@ -311,6 +280,7 @@
         document.getElementById('command').addEventListener('keypress', function (event) {
             if (event.key === 'Enter') {
                 executeCommand();
+                this.focus(); // Keep the input focused
             }
         });
     </script>
