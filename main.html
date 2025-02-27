@@ -3,16 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Termux</title>
-     <!-- add icon link -->
-<link rel="icon" href=
-"https://i.ibb.co/DS0gDns/T-1-removebg-preview.png"
-        type="image/x-icon" />
+    <title>Termux Terminal</title>
+    <link rel="icon" href="https://i.ibb.co/DS0gDns/T-1-removebg-preview.png" type="image/x-icon" />
     <style>
         body {
             font-family: monospace;
-            background-color: #121212;
-            color: #FFFFFF;
+            background-color: #25272b;
+            color: #D8DEE9;
             margin: 0;
             padding: 0;
             display: flex;
@@ -24,10 +21,11 @@
 
         .terminal {
             width: 80%;
-            background-color: #1E1E1E;
+            background-color: #25272b;
+            /*background-color: #3B4252;*/
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            /*box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);*/
         }
 
         .output {
@@ -39,29 +37,26 @@
 
         .input {
             display: flex;
+            align-items: center;
+        }
+
+        .input .prompt {
+            color: #81A1C1;
+            margin-right: 10px;
         }
 
         .input input {
             flex: 1;
-            background-color: #121212;
-            color: #FFFFFF;
+            background-color: transparent;
+            color: #D8DEE9;
             border: none;
             outline: none;
-            padding: 10px;
+            padding: 5px;
             font-family: monospace;
         }
 
-        .input button {
-            background-color: #007ACC;
-            color: #FFFFFF;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-family: monospace;
-        }
-
-        .input button:hover {
-            background-color: #005A9C;
+        .input input:focus {
+            outline: none;
         }
 
         table {
@@ -71,41 +66,68 @@
         }
 
         th, td {
-            border: 1px solid #333;
+            border: 1px solid #4C566A;
             padding: 8px;
             text-align: left;
         }
 
         th {
-            background-color: #333;
+            background-color: #4C566A;
         }
 
         tr:nth-child(even) {
-            background-color: #2E2E2E;
+            background-color: #44474d;
+        }
+
+        .command-output {
+            color: #A3BE8C;
+        }
+
+        .error-output {
+            color: #BF616A;
+        }
+
+        .matrix {
+            background-color: #000;
+            color: #0F0;
         }
     </style>
 </head>
 <body>
     <div class="terminal">
-        <div class="output" id="output">Termux</div>
+        <div class="output" id="output">
+            <span class="command-output">Welcome to Termux Terminal</span>
+        </div>
         <div class="input">
-            <input type="text" id="command" placeholder="Enter command">
-            <button onclick="executeCommand()">Execute</button>
+            <span class="prompt">[user@Termux ~]$</span>
+            <input type="text" id="command" placeholder="Enter command" autofocus>
         </div>
         <div id="table"></div>
     </div>
 
     <script>
+        // Initialize todo list and command history
         let todoList = JSON.parse(localStorage.getItem('todoList')) || [];
+        let commandHistory = [];
+        let historyIndex = -1;
 
+        // Random quotes for the !quote command
+        const quotes = [
+            "The best way to predict the future is to create it. – Peter Drucker",
+            "Do what you can, with what you have, where you are. – Theodore Roosevelt",
+            "Success is not final, failure is not fatal: It is the courage to continue that counts. – Winston Churchill"
+        ];
+
+        // Save todo list to localStorage
         function saveToLocalStorage() {
             localStorage.setItem('todoList', JSON.stringify(todoList));
         }
 
+        // Render the todo list as a table
         function renderTable() {
             const tableDiv = document.getElementById('table');
             if (todoList.length === 0) {
-                tableDiv.innerHTML = "<p>No tasks available. Use !help</p>";
+                tableDiv.innerHTML = "<p class='command-output'>No tasks available. Use !help</p>";
                 return;
             }
 
@@ -116,47 +138,62 @@
             tableHTML += "</tbody></table>";
             tableDiv.innerHTML = tableHTML;
         }
-        document.getElementById('command').addEventListener('keypress', function (event) {
-    if (event.key === 'Enter') {
-        executeCommand();
-    }
-});
 
+        // Handle command history navigation
+        document.getElementById('command').addEventListener('keydown', function (event) {
+            if (event.key === 'ArrowUp') {
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    this.value = commandHistory[commandHistory.length - 1 - historyIndex];
+                }
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    this.value = commandHistory[commandHistory.length - 1 - historyIndex];
+                } else {
+                    historyIndex = -1;
+                    this.value = '';
+                }
+                event.preventDefault();
+            }
+        });
 
-        function getCurrentDate() {
-            const date = new Date();
-            return date.toISOString().split('T')[0];
-        }
-
+        // Execute commands
         function executeCommand() {
             const commandInput = document.getElementById('command');
             const outputDiv = document.getElementById('output');
             const command = commandInput.value.trim();
             commandInput.value = '';
 
+            if (command) {
+                commandHistory.push(command);
+                historyIndex = -1;
+            }
+
             if (command.startsWith("!add_task")) {
                 const taskName = command.split(/ (.+)/)[1];
                 if (taskName) {
-                    const dueDate = getCurrentDate();
+                    const dueDate = new Date().toISOString().split('T')[0];
                     todoList.push({ task: taskName, dueDate: dueDate, status: 'Pending' });
                     saveToLocalStorage();
-                    outputDiv.textContent = `Task added: ${taskName} (Due: ${dueDate})`;
+                    outputDiv.innerHTML += `<br><span class="command-output">Task added: ${taskName} (Due: ${dueDate})</span>`;
                 } else {
-                    outputDiv.textContent = "Invalid command format. Use: !add_task <task>";
+                    outputDiv.innerHTML += `<br><span class="error-output">Invalid command format. Use: !add_task <task></span>`;
                 }
             } else if (command.startsWith("!mark_done")) {
                 const taskNumber = parseInt(command.split(" ")[1]) - 1;
                 if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
                     todoList[taskNumber].status = 'Completed';
                     saveToLocalStorage();
-                    outputDiv.textContent = `Task marked as completed: ${todoList[taskNumber].task}`;
+                    outputDiv.innerHTML += `<br><span class="command-output">Task marked as completed: ${todoList[taskNumber].task}</span>`;
                 } else {
-                    outputDiv.textContent = "Invalid task number.";
+                    outputDiv.innerHTML += `<br><span class="error-output">Invalid task number.</span>`;
                 }
-                } else if (command === "!sort_tasks") {
-            todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-            saveToLocalStorage();
-            outputDiv.textContent = "Tasks sorted by due date.";
+            } else if (command === "!sort_tasks") {
+                todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                saveToLocalStorage();
+                outputDiv.innerHTML += `<br><span class="command-output">Tasks sorted by due date.</span>`;
             } else if (command.startsWith("!edit_task")) {
                 const args = command.split(/ (.+)/)[1]?.split(" ");
                 if (args && args.length >= 2) {
@@ -165,12 +202,12 @@
                     if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
                         todoList[taskNumber].task = newTaskName;
                         saveToLocalStorage();
-                        outputDiv.textContent = `Task updated: ${newTaskName}`;
+                        outputDiv.innerHTML += `<br><span class="command-output">Task updated: ${newTaskName}</span>`;
                     } else {
-                        outputDiv.textContent = "Invalid task number.";
+                        outputDiv.innerHTML += `<br><span class="error-output">Invalid task number.</span>`;
                     }
                 } else {
-                    outputDiv.textContent = "Invalid command format. Use: !edit_task <task_number> <new_task>";
+                    outputDiv.innerHTML += `<br><span class="error-output">Invalid command format. Use: !edit_task <task_number> <new_task></span>`;
                 }
             } else if (command.startsWith("!change_date")) {
                 const args = command.split(" ");
@@ -179,64 +216,104 @@
                 if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length && newDueDate) {
                     todoList[taskNumber].dueDate = newDueDate;
                     saveToLocalStorage();
-                    outputDiv.textContent = `Due date updated: Task ${taskNumber + 1} is now due on ${newDueDate}`;
+                    outputDiv.innerHTML += `<br><span class="command-output">Due date updated: Task ${taskNumber + 1} is now due on ${newDueDate}</span>`;
                 } else {
-                    outputDiv.textContent = "Invalid command format or task number. Use: !change_date <task_number> <new_due_date>";
+                    outputDiv.innerHTML += `<br><span class="error-output">Invalid command format or task number. Use: !change_date <task_number> <new_due_date></span>`;
                 }
-        
-
             } else if (command === "!clear") {
-        if (todoList.length > 0) {
-            todoList = [];
-            saveToLocalStorage();
-            outputDiv.textContent = "All tasks cleared.";
-        } else {
-            outputDiv.textContent = "No tasks to clear.";
-        }
+                if (todoList.length > 0) {
+                    todoList = [];
+                    saveToLocalStorage();
+                    outputDiv.innerHTML += `<br><span class="command-output">All tasks cleared.</span>`;
+                } else {
+                    outputDiv.innerHTML += `<br><span class="error-output">No tasks to clear.</span>`;
+                }
             } else if (command.startsWith("!clear_task")) {
-        const taskNumber = parseInt(command.split(" ")[1]) - 1;
-        if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
-            const removedTask = todoList.splice(taskNumber, 1);
-            saveToLocalStorage();
-            outputDiv.textContent = `Task cleared: ${removedTask[0].task}`;
-        } else {
-            outputDiv.textContent = "Invalid task number.";
-        }
+                const taskNumber = parseInt(command.split(" ")[1]) - 1;
+                if (!isNaN(taskNumber) && taskNumber >= 0 && taskNumber < todoList.length) {
+                    const removedTask = todoList.splice(taskNumber, 1);
+                    saveToLocalStorage();
+                    outputDiv.innerHTML += `<br><span class="command-output">Task cleared: ${removedTask[0].task}</span>`;
+                } else {
+                    outputDiv.innerHTML += `<br><span class="error-output">Invalid task number.</span>`;
+                }
             } else if (command === "!show_tasks") {
                 renderTable();
                 return;
-            } else if (command === "!signout") {
-                window.location.href = "logout.html";  // Redirect to logout page
-                return; // Ensure no further code is executed
+            } else if (command === "!clear_terminal") {
+                outputDiv.innerHTML = '';
+            } else if (command === "!date") {
+                const now = new Date();
+                outputDiv.innerHTML += `<br><span class="command-output">Current date and time: ${now.toLocaleString()}</span>`;
+            } else if (command === "!quote") {
+                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                outputDiv.innerHTML += `<br><span class="command-output">${randomQuote}</span>`;
+            } else if (command.startsWith("!calc")) {
+                const expression = command.split(" ")[1];
+                try {
+                    const result = eval(expression); // Be cautious with eval in production
+                    outputDiv.innerHTML += `<br><span class="command-output">Result: ${result}</span>`;
+                } catch (e) {
+                    outputDiv.innerHTML += `<br><span class="error-output">Invalid expression.</span>`;
+                }
+            } else if (command === "!theme light") {
+                document.body.style.backgroundColor = "#FFFFFF";
+                document.body.style.color = "#000000";
+                outputDiv.innerHTML += `<br><span class="command-output">Switched to light theme.</span>`;
+            } else if (command === "!theme dark") {
+                document.body.style.backgroundColor = "#2E3440";
+                document.body.style.color = "#D8DEE9";
+                outputDiv.innerHTML += `<br><span class="command-output">Switched to dark theme.</span>`;
+            } else if (command === "!matrix") {
+                document.body.classList.add('matrix');
+                outputDiv.innerHTML += `<br><span class="command-output">Welcome to the Matrix...</span>`;
+            } else if (command === "!rickroll") {
+                window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
+            } else if (command === "!about") {
+                 const aboutText = `
+                    Termux Terminal (Simulated)
+                    Version: 1.5.0
+                    Description: A simulated terminal for task management and fun commands.
+                    Created by: <a href="https://jeffvscblogs.github.io/home/about.html" target="_blank" style="color: #81A1C1;">@Jeffvsc</a>
+                    Know more:  <a href="https://jeffvscblogs.github.io/home/Projects.html" target="_blank" style="color: #81A1C1;">Projects</a>
+                `;
+                outputDiv.innerHTML += `<br><span class="command-output">${aboutText}</span>`;
+
             } else if (command === "!help") {
-                window.location.href = "Documentation.html";  // Redirect to help page
-                return; // Ensure no further code is executed
-            } else if (command === "!notes") {
-                window.open("login.html", "_blank")  // Redirect to notes page
-                return; // Ensure no further code is executed
-            } else if (command === "!pomodoro") {
-                window.open("https://inkorafocus.netlify.app/", "_blank")  // Replace with your desired URL
-                return; // Ensure no further code is executed
-            } else if (command === "!termux") {
-                window.open("https://termuxfocus.netlify.app/", "_blank")  // Replace with your desired URL
-                return; // Ensure no further code is executed
-             } else if (command === "!weather") {
-                window.open("https://inkoradev.github.io/weather/", "_blank")  // Replace with your desired URL
-                return; // Ensure no further code is executed
-             } else if (command === "!blog") {
-                window.open("https://inkoradev.github.io/user/", "_blank")  // Replace with your desired URL
-                return; // Ensure no further code is executed
-            } else if (command === "!links") {
-                window.open("https://termuxlinks.netlify.app/", "_blank")  // Replace with your desired URL
-                return; // Ensure no further code is executed
+                const helpText = `
+                Available Commands:
+                - !add_task <task>: Add a new task.
+                - !mark_done <task_number>: Mark a task as completed.
+                - !sort_tasks: Sort tasks by due date.
+                - !edit_task <task_number> <new_task>: Edit a task.
+                - !change_date <task_number> <new_due_date>: Change a task's due date.
+                - !clear: Clear all tasks.
+                - !clear_task <task_number>: Clear a specific task.
+                - !show_tasks: Display all tasks.
+                - !clear_terminal: Clear the terminal output.
+                - !date: Show current date and time.
+                - !quote: Display a random quote.
+                - !calc <expression>: Perform a calculation.
+                - !theme <light/dark>: Switch between light and dark themes.
+                - !rickroll: Rickroll yourself.
+                - !about: Know more about creator and its version
+                `;
+                outputDiv.innerHTML += `<br><span class="command-output">${helpText}</span>`;
             } else {
-                outputDiv.textContent = "Invalid command. Try again. Use !help";
+                outputDiv.innerHTML += `<br><span class="error-output">Invalid command. Try again. Use !help</span>`;
             }
 
             renderTable();
         }
 
+        // Initialize table and event listeners
         renderTable();
+        document.getElementById('command').addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                executeCommand();
+            }
+        });
     </script>
+    <datalist id="suggestions"></datalist>
 </body>
 </html>
