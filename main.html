@@ -316,6 +316,9 @@
             } else if (command === "!rickroll") {
                 window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
                 typeText(outputDiv, `Never gonna give you up...\n`);
+            } else if (command === "!dictionary") {
+                window.open('https://jeffvscblogs.github.io/lamadictionary/');
+                typeText(outputDiv, `Woah New word alr! YOu are a genius <3 ...\n`);
             } else if (command === "!neofetch") {
                 const neofetchOutput = `
                 <div class="neofetch-container">
@@ -348,9 +351,9 @@
                 - !show_tasks: Display all tasks.
                 - !clear_terminal: Clear the terminal output.
                 - !date: Show current date and time.
+                - !dictionary: Opens the dictionary for a quick learn 
                 - !quote: Display a random quote.
                 - !calc <expression>: Perform a calculation.
-                - !theme <light/dark>: Switch between light and dark themes.
                 - !rickroll: Rickroll yourself.
                 - !neofetch: Display system information and an image.
                 `;
