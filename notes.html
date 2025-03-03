@@ -528,7 +528,15 @@
         }
       }
     }
-    
+    function toggleFolder(folderId) {
+  const folder = data.folders.find(f => f.id == folderId);
+  if (folder) {
+    folder.expanded = !folder.expanded;
+    saveData();
+    renderFolders();
+  }
+}
+
     // Inline renaming of a note (editable in place)
     function inlineRenameNote(noteId) {
       const note = data.notes.find(n => n.id == noteId);
