@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Termux | Notes</title>
+  <link rel="icon" href="https://i.ibb.co/DS0gDns/T-1-removebg-preview.png" type="image/x-icon" />
+  <!-- SimpleMDE CSS for Markdown & rich text editing -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+  <style>
+    /* Global styles */
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      background-color: #1e1e1e;
+      color: #dcdcdc;
+      height: 100vh;
+      display: flex;
+    }
+    .app {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    /* Sidebar styles */
+    .sidebar {
+      width: 300px;
+      background: #252526;
+      border-right: 1px solid #3c3c3c;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      overflow-y: auto;
+      position: relative;
+      min-width: 150px;
+      max-width: 500px;
+    }
+    /* Resizer Handle for Sidebar */
+    #sidebarResizer {
+      width: 5px;
+      cursor: col-resize;
+      background: #3c3c3c;
+      height: 100%;
+    }
+    /* Sidebar header shows website name */
+    .sidebar h2 {
+      font-size: 1.2rem;
+      color: #ffffff;
+      margin: 0;
+      text-align: center;
+    }
+    /* Search input in sidebar */
+    #searchInput {
+      width: 100%;
+      padding: 5px;
+      margin: 5px 0;
+      border: 1px solid #3c3c3c;
+      background: #1e1e1e;
+      color: #dcdcdc;
+    }
+    /* Smaller action buttons */
+    .sidebar button {
+      padding: 5px 8px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .add-folder, .add-note {
+      background-color: #3a9ad9;
+      color: white;
+    }
+    .add-folder:hover, .add-note:hover {
+      background-color: #358bbf;
+    }
+    /* Folder list styling: Minimal, similar to Obsidian */
+    .folder-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      flex-grow: 1;
+    }
+    .folder-list li {
+      padding: 4px 0;
+      margin-bottom: 4px;
+      background: transparent;
+    }
+    .folder-list li.active > div > span[data-type="folder"] {
+      font-weight: bold;
+      color: #ffffff;
+    }
+    /* Nested note list styling (minimal thread-like look) */
+    .folder-list li ul {
+      list-style: none;
+      padding-left: 10px;
+      margin: 5px 0 0 15px;
+      border-left: 1px solid #555;
+    }
+    .folder-list li ul li {
+      padding: 2px 0 2px 10px;
+      background: transparent;
+      margin: 0;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .folder-list li ul li:hover,
+    .folder-list li ul li.active {
+      color: #fff;
+      font-weight: bold;
+    }
+    /* Main workspace styles */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+      position: relative;
+    }
+    .note-title {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+      border: none;
+      border-bottom: 2px solid #3c3c3c;
+      background: #1e1e1e;
+      color: #ffffff;
+      outline: none;
+      padding: 5px 0;
+    }
+    /* Hide the original textarea as SimpleMDE will replace it */
+    .note-content {
+      display: none;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    /* Custom Context Menu styling */
+    #contextMenu {
+      display: none;
+      position: absolute;
+      background: #252526;
+      border: 1px solid #3c3c3c;
+      padding: 5px;
+      z-index: 1000;
+      width: 150px;
+      font-size: 0.8rem;
+    }
+    #contextMenu div {
+      padding: 5px;
+      cursor: pointer;
+    }
+    #contextMenu div:hover {
+      background: #3c3c3c;
+    }
+    /* Custom Pop-Up Message styling */
+    #popupMessage {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      display: none;
+      z-index: 2000;
+      font-size: 0.9rem;
+    }
+    /* SimpleMDE Dark Theme Overrides */
+    .SimpleMDEContainer {
+      background: #1e1e1e !important;
+      border: none !important;
+    }
+    .CodeMirror {
+      background: #1e1e1e !important;
+      color: #dcdcdc !important;
+      border: none;
+    }
+    .CodeMirror-scroll {
+      background: #1e1e1e !important;
+    }
+    .CodeMirror-gutters {
+      background: #1e1e1e !important;
+      border-right: 1px solid #3c3c3c !important;
+    }
+    .CodeMirror-cursor {
+      border-left: 1px solid #dcdcdc !important;
+    }
+    .editor-toolbar {
+      background: #252526 !important;
+      border: none !important;
+    }
+    .editor-toolbar a,
+    .editor-toolbar a:hover,
+    .editor-toolbar a:focus {
+      color: #dcdcdc !important;
+    }
+    .editor-toolbar a:hover {
+      background: #3c3c3c !important;
+      color: #a0a0a0 !important;
+    }
+    .editor-statusbar {
+      background: #252526 !important;
+      color: #dcdcdc !important;
+      border: none !important;
+    }
+    .editor-preview,
+    .editor-preview-side {
+      background: #1e1e1e !important;
+      color: #dcdcdc !important;
+    }
+    .CodeMirror ::selection {
+      background: rgba(85, 85, 85, 0.5) !important;
+    }
+    .CodeMirror ::-moz-selection {
+      background: rgba(85, 85, 85, 0.5) !important;
+    }
+    /* ------------------------------ */
+    /* Handwriting Workspace Styles */
+    #handwritingWorkspace {
+      display: none; /* Hidden by default; toggled on/off */
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(30, 30, 30, 0.95);
+      z-index: 3000;
+    }
+    /* The canvases cover the viewport. An "infinite" whiteboard is simulated via a world offset. */
+    #hwBgCanvas,
+    #hwDrawCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    /* Show a crosshair cursor on the drawing canvas */
+    #hwDrawCanvas {
+      cursor: crosshair;
+    }
+    /* Handwriting control panel */
+    #hwControls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 8px;
+      border-radius: 5px;
+      font-family: sans-serif;
+    }
+    #hwControls > * {
+      margin: 4px;
+    }
+    #hwControls button,
+    #hwControls input {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    #hwControls label {
+      font-size: 0.9rem;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar: Website name and folders -->
+    <div class="sidebar">
+      <h2>TERMUX</h2>
+      <input type="text" id="searchInput" placeholder="Search..." />
+      <button class="add-folder">+ Add Folder</button>
+      <ul class="folder-list"></ul>
+      <button class="add-note">+ Add Note</button>
+    </div>
+    <!-- Resizer handle between sidebar and main -->
+    <div id="sidebarResizer"></div>
+    <!-- Main workspace for editing notes -->
+    <div class="main">
+      <input type="text" class="note-title" placeholder="Title..." />
+      <!-- SimpleMDE will replace this textarea -->
+      <textarea class="note-content" placeholder="Write your note here..."></textarea>
+      <div class="actions">
+        <!-- Each note gets its own handwriting overlay -->
+        <button id="toggleHandwriting">Toggle Handwriting</button>
+      </div>
+      <!-- Handwriting Workspace Overlay -->
+      <div id="handwritingWorkspace">
+        <!-- The canvases always cover the viewport. An infinite whiteboard is simulated via world offset. -->
+        <canvas id="hwBgCanvas"></canvas>
+        <canvas id="hwDrawCanvas"></canvas>
+        <!-- Handwriting Controls -->
+        <div id="hwControls">
+          <button id="hwPenBtn">Pen</button>
+          <button id="hwEraserBtn">Eraser</button>
+          <button id="hwPanBtn">Pan</button>
+          <br>
+          <label for="hwColorPicker">Pen Color:</label>
+          <input type="color" id="hwColorPicker" value="#000000">
+          <br>
+          <label for="hwBgColorPicker">Bg Color:</label>
+          <input type="color" id="hwBgColorPicker" value="#cccccc">
+          <br>
+          <label for="hwGridSpacing">Grid Spacing:</label>
+          <input type="range" id="hwGridSpacing" min="10" max="50" value="20">
+          <br>
+          <button id="hwUndoBtn">Undo</button>
+          <button id="hwRedoBtn">Redo</button>
+          <button id="hwClearBtn">Clear</button>
+          <button id="hwDownloadBtn">Download</button>
+          <button id="hwCloseBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Context Menu (populated dynamically) -->
+  <div id="contextMenu"></div>
+  <!-- Custom Pop-Up Message for notifications -->
+  <div id="popupMessage"></div>
+
+  <!-- SimpleMDE JS for Markdown & rich text editing -->
+  <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+  <script>
+    /* ------------------ Main Note-Taking Code ------------------ */
+    // Initialize SimpleMDE on the textarea with dark theme overrides
+    var simplemde = new SimpleMDE({ 
+      element: document.querySelector(".note-content"),
+      spellChecker: false,
+      status: false
+    });
+    
+    // DOM element references for main note app
+    const sidebar = document.querySelector('.sidebar');
+    const resizer = document.getElementById("sidebarResizer");
+    const folderList = document.querySelector('.folder-list');
+    const noteTitle = document.querySelector('.note-title');
+    const addFolderButton = document.querySelector('.add-folder');
+    const addNoteButton = document.querySelector('.add-note');
+    const contextMenu = document.getElementById('contextMenu');
+    const popupMessage = document.getElementById('popupMessage');
+    const searchInput = document.getElementById('searchInput');
+
+    // Global data and context variables for notes/folders
+    let data = JSON.parse(localStorage.getItem('obsidianData')) || { folders: [], notes: [] };
+    let currentFolderId = null;
+    let currentNoteId = null;
+    let contextItemType = null; // "folder", "note", or "generic"
+    let contextItemId = null;
+
+    // Save data to localStorage
+    function saveData() {
+      localStorage.setItem('obsidianData', JSON.stringify(data));
+    }
+
+    // Show custom pop-up message (auto hides after 3 seconds)
+    function showPopupMessage(message) {
+      popupMessage.textContent = message;
+      popupMessage.style.display = 'block';
+      setTimeout(() => { popupMessage.style.display = 'none'; }, 3000);
+    }
+
+    // Enable resizing of the sidebar via the resizer handle
+    resizer.addEventListener('mousedown', initResize);
+    function initResize(e) {
+      document.addEventListener('mousemove', resizeSidebar);
+      document.addEventListener('mouseup', stopResize);
+    }
+    function resizeSidebar(e) {
+      const newWidth = e.clientX;
+      if(newWidth < 150) return;
+      if(newWidth > 500) return;
+      sidebar.style.width = newWidth + "px";
+    }
+    function stopResize(e) {
+      document.removeEventListener('mousemove', resizeSidebar);
+      document.removeEventListener('mouseup', stopResize);
+    }
+
+    // DRAG AND DROP FUNCTIONS
+    function dragStartFolder(e) {
+      e.dataTransfer.setData("text/folder", e.currentTarget.dataset.id);
+      e.dataTransfer.effectAllowed = "move";
+    }
+    function dragOverFolder(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
+    function dropFolder(e) {
+      e.preventDefault();
+      const targetId = e.currentTarget.dataset.id;
+      const draggedFolderId = e.dataTransfer.getData("text/folder");
+      if(draggedFolderId) {
+        if(draggedFolderId === targetId) return;
+        let draggedIndex = data.folders.findIndex(f => f.id == draggedFolderId);
+        let targetIndex = data.folders.findIndex(f => f.id == targetId);
+        if(draggedIndex >= 0 && targetIndex >= 0) {
+          const [draggedFolder] = data.folders.splice(draggedIndex, 1);
+          data.folders.splice(targetIndex, 0, draggedFolder);
+          saveData();
+          renderFolders();
+        }
+      } else {
+        const draggedNoteId = e.dataTransfer.getData("text/note");
+        if(draggedNoteId) {
+          const noteIndex = data.notes.findIndex(n => n.id == draggedNoteId);
+          if(noteIndex >= 0) {
+            data.notes[noteIndex].folderId = targetId;
+            saveData();
+            renderFolders();
+          }
+        }
+      }
+    }
+    function dragStartNote(e) {
+      e.dataTransfer.setData("text/note", e.currentTarget.dataset.id);
+      e.dataTransfer.effectAllowed = "move";
+    }
+    function dragOverNote(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
+    function dropNote(e) {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData("text/note");
+      const targetId = e.currentTarget.dataset.id;
+      if(draggedId === targetId) return;
+      const targetNote = data.notes.find(n => n.id == targetId);
+      if (!targetNote) return;
+      const targetFolderId = targetNote.folderId;
+      const draggedIndex = data.notes.findIndex(n => n.id == draggedId);
+      if(draggedIndex < 0) return;
+      const [draggedNote] = data.notes.splice(draggedIndex, 1);
+      draggedNote.folderId = targetFolderId;
+      const targetIndex = data.notes.findIndex(n => n.id == targetId && n.folderId == targetFolderId);
+      if(targetIndex < 0) return;
+      data.notes.splice(targetIndex, 0, draggedNote);
+      saveData();
+      renderFolders();
+    }
+
+    // RENDERING FOLDERS AND NOTES
+    function renderFolders() {
+      const searchTerm = searchInput.value.toLowerCase();
+      folderList.innerHTML = '';
+      data.folders.forEach(folder => {
+        const folderMatches = folder.name.toLowerCase().includes(searchTerm);
+        const notesInFolder = data.notes.filter(note => note.folderId == folder.id);
+        const filteredNotes = notesInFolder.filter(note => note.title.toLowerCase().includes(searchTerm));
+        if(searchTerm && !folderMatches && filteredNotes.length === 0) return;
+        const li = document.createElement('li');
+        li.dataset.id = folder.id;
+        li.classList.toggle('active', folder.id == currentFolderId);
+        li.setAttribute("draggable", "true");
+        li.addEventListener("dragstart", dragStartFolder);
+        li.addEventListener("dragover", dragOverFolder);
+        li.addEventListener("drop", dropFolder);
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.style.display = 'flex';
+        headerDiv.style.alignItems = 'center';
+        
+        const toggleIcon = document.createElement('span');
+        toggleIcon.textContent = folder.expanded ? '▾' : '▸';
+        toggleIcon.style.marginRight = '5px';
+        toggleIcon.style.cursor = 'pointer';
+        toggleIcon.addEventListener('click', (e) => { e.stopPropagation(); toggleFolder(folder.id); });
+        headerDiv.appendChild(toggleIcon);
+        
+        const folderName = document.createElement('span');
+        folderName.textContent = folder.name || 'Untitled Folder';
+        folderName.style.cursor = 'pointer';
+        folderName.dataset.type = 'folder';
+        folderName.dataset.id = folder.id;
+        let clickTimer = null;
+        folderName.addEventListener('click', (e) => {
+          if(clickTimer) clearTimeout(clickTimer);
+          clickTimer = setTimeout(() => { selectFolder(folder.id); clickTimer = null; }, 250);
+        });
+        folderName.addEventListener('dblclick', (e) => {
+          if(clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+          inlineRenameFolder(folder.id);
+        });
+        headerDiv.appendChild(folderName);
+        li.appendChild(headerDiv);
+        
+        if(folder.expanded) {
+          const nestedUl = document.createElement('ul');
+          const notesToRender = searchTerm ? filteredNotes : notesInFolder;
+          notesToRender.forEach(note => {
+            const noteLi = document.createElement('li');
+            noteLi.textContent = note.title || 'Untitled Note';
+            noteLi.dataset.type = 'note';
+            noteLi.dataset.id = note.id;
+            noteLi.classList.toggle('active', note.id == currentNoteId);
+            noteLi.style.cursor = 'pointer';
+            noteLi.setAttribute("draggable", "true");
+            noteLi.addEventListener("dragstart", dragStartNote);
+            noteLi.addEventListener("dragover", dragOverNote);
+            noteLi.addEventListener("drop", dropNote);
+            noteLi.addEventListener('click', (e) => { e.stopPropagation(); selectNote(note.id); });
+            noteLi.addEventListener('dblclick', (e) => {
+              e.stopPropagation();
+              inlineRenameNote(note.id);
+            });
+            nestedUl.appendChild(noteLi);
+          });
+          li.appendChild(nestedUl);
+        }
+        folderList.appendChild(li);
+      });
+    }
+    
+    // SELECTION AND EDITING FUNCTIONS
+    function selectFolder(id) {
+      currentFolderId = id;
+      currentNoteId = null;
+      noteTitle.value = '';
+      simplemde.value('');
+      renderFolders();
+    }
+    
+    function selectNote(id) {
+      const note = data.notes.find(n => n.id == id);
+      if(note) {
+        currentNoteId = id;
+        noteTitle.value = note.title;
+        simplemde.value(note.content);
+      }
+      renderFolders();
+    }
+    
+    function saveNote() {
+      if(!currentFolderId) return;
+      if(currentNoteId) {
+        const note = data.notes.find(n => n.id == currentNoteId);
+        note.title = noteTitle.value;
+        note.content = simplemde.value();
+      } else {
+        const newNote = {
+          id: Date.now(),
+          folderId: currentFolderId,
+          title: noteTitle.value || 'New Note',
+          content: simplemde.value()
+        };
+        data.notes.push(newNote);
+        currentNoteId = newNote.id;
+      }
+      saveData();
+      renderFolders();
+    }
+    
+    function addFolder() {
+      const newFolder = {
+        id: Date.now(),
+        name: `New Folder ${data.folders.length + 1}`,
+        expanded: true
+      };
+      data.folders.push(newFolder);
+      saveData();
+      renderFolders();
+    }
+    
+    function addNote() {
+      if(!currentFolderId) {
+        showPopupMessage("Please select a folder to add a note.");
+        return;
+      }
+      const newNote = {
+        id: Date.now(),
+        folderId: currentFolderId,
+        title: `New Note ${data.notes.filter(n => n.folderId == currentFolderId).length + 1}`,
+        content: ""
+      };
+      data.notes.push(newNote);
+      saveData();
+      renderFolders();
+      selectNote(newNote.id);
+    }
+    
+    function inlineRenameFolder(folderId) {
+      const folder = data.folders.find(f => f.id == folderId);
+      if(folder) {
+        const folderNameElement = document.querySelector(`span[data-type="folder"][data-id="${folderId}"]`);
+        if(folderNameElement) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = folder.name;
+          input.style.fontSize = 'inherit';
+          input.style.fontFamily = 'inherit';
+          input.style.background = 'transparent';
+          input.style.border = 'none';
+          input.style.outline = 'none';
+          input.style.color = '#dcdcdc';
+          input.style.width = '100%';
+          folderNameElement.parentNode.replaceChild(input, folderNameElement);
+          input.focus();
+          input.select();
+          input.addEventListener('blur', () => {
+            const newName = input.value.trim();
+            if(newName) { folder.name = newName; }
+            saveData();
+            renderFolders();
+          });
+          input.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') { input.blur(); }
+          });
+        }
+      }
+    }
+    
+    function toggleFolder(folderId) {
+      const folder = data.folders.find(f => f.id == folderId);
+      if (folder) {
+        folder.expanded = !folder.expanded;
+        saveData();
+        renderFolders();
+      }
+    }
+    
+    function inlineRenameNote(noteId) {
+      const note = data.notes.find(n => n.id == noteId);
+      if(note) {
+        const noteElement = document.querySelector(`li[data-type="note"][data-id="${noteId}"]`);
+        if(noteElement) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = note.title;
+          input.style.fontSize = 'inherit';
+          input.style.fontFamily = 'inherit';
+          input.style.background = 'transparent';
+          input.style.border = 'none';
+          input.style.outline = 'none';
+          input.style.color = '#dcdcdc';
+          input.style.width = '100%';
+          noteElement.parentNode.replaceChild(input, noteElement);
+          input.focus();
+          input.select();
+          input.addEventListener('blur', () => {
+            const newTitle = input.value.trim();
+            if(newTitle) { note.title = newTitle; }
+            saveData();
+            renderFolders();
+          });
+          input.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') { input.blur(); }
+          });
+        }
+      }
+    }
+    
+    // DELETE FUNCTIONS
+    function deleteFolder(folderId) {
+      if (confirm("Are you sure you want to delete this folder? All notes inside will be deleted.")) {
+        data.folders = data.folders.filter(f => f.id != folderId);
+        data.notes = data.notes.filter(n => n.folderId != folderId);
+        if (currentFolderId == folderId) {
+          currentFolderId = null;
+          currentNoteId = null;
+          noteTitle.value = '';
+          simplemde.value('');
+        }
+        saveData();
+        renderFolders();
+      }
+    }
+    
+    function deleteNote(noteId) {
+      if (confirm("Are you sure you want to delete this note?")) {
+        data.notes = data.notes.filter(n => n.id != noteId);
+        if (currentNoteId == noteId) {
+          currentNoteId = null;
+          noteTitle.value = '';
+          simplemde.value('');
+        }
+        saveData();
+        renderFolders();
+      }
+    }
+    
+    // CONTEXT MENU HANDLING
+    sidebar.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      let targetType = e.target.dataset.type;
+      let targetId = e.target.dataset.id;
+      let menuItems = [];
+      if (targetType === "folder") {
+        menuItems = [
+          { action: "folderAddNote", label: "Add New Note" },
+          { action: "folderRename", label: "Rename Folder" },
+          { action: "folderDelete", label: "Delete Folder" }
+        ];
+        contextItemType = "folder";
+        contextItemId = targetId;
+      } else if (targetType === "note") {
+        menuItems = [
+          { action: "noteRename", label: "Rename Note" },
+          { action: "noteDelete", label: "Delete Note" }
+        ];
+        contextItemType = "note";
+        contextItemId = targetId;
+      } else {
+        menuItems = [];
+        if (currentNoteId) {
+          menuItems.push({ action: "genericRenameNote", label: "Rename Note" });
+        }
+        menuItems.push({ action: "genericAddNote", label: "Add Note" });
+        menuItems.push({ action: "genericAddFolder", label: "Add Folder" });
+        contextItemType = "generic";
+        contextItemId = null;
+      }
+      contextMenu.innerHTML = "";
+      menuItems.forEach(item => {
+        const div = document.createElement("div");
+        div.textContent = item.label;
+        div.dataset.action = item.action;
+        contextMenu.appendChild(div);
+      });
+      contextMenu.style.display = "block";
+      contextMenu.style.left = e.pageX + "px";
+      contextMenu.style.top = e.pageY + "px";
+    });
+    
+    document.addEventListener("click", () => {
+      contextMenu.style.display = "none";
+    });
+    
+    contextMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const action = e.target.dataset.action;
+      if(!action) return;
+      if (action === "folderAddNote") {
+        currentFolderId = contextItemId;
+        addNote();
+      } else if (action === "folderRename") {
+        inlineRenameFolder(contextItemId);
+      } else if (action === "folderDelete") {
+        deleteFolder(contextItemId);
+      } else if (action === "noteRename") {
+        inlineRenameNote(contextItemId);
+      } else if (action === "noteDelete") {
+        deleteNote(contextItemId);
+      } else if (action === "genericRenameNote") {
+        if(currentNoteId) inlineRenameNote(currentNoteId);
+      } else if (action === "genericAddNote") {
+        addNote();
+      } else if (action === "genericAddFolder") {
+        addFolder();
+      }
+      contextMenu.style.display = "none";
+    });
+    
+    noteTitle.addEventListener("input", saveNote);
+    simplemde.codemirror.on("change", saveNote);
+    
+    addFolderButton.addEventListener("click", addFolder);
+    addNoteButton.addEventListener("click", addNote);
+    
+    searchInput.addEventListener("input", renderFolders);
+    
+    renderFolders();
+
+    /* ------------------ Handwriting Workspace Code ------------------ */
+    // Global variables for infinite canvas world offset
+    let worldOffsetX = 0;
+    let worldOffsetY = 0;
+    // Handwriting workspace DOM references
+    const hwWorkspace = document.getElementById("handwritingWorkspace");
+    const hwBgCanvas = document.getElementById("hwBgCanvas");
+    const hwDrawCanvas = document.getElementById("hwDrawCanvas");
+    const hwPenBtn = document.getElementById("hwPenBtn");
+    const hwEraserBtn = document.getElementById("hwEraserBtn");
+    const hwPanBtn = document.getElementById("hwPanBtn");
+    const hwUndoBtn = document.getElementById("hwUndoBtn");
+    const hwRedoBtn = document.getElementById("hwRedoBtn");
+    const hwClearBtn = document.getElementById("hwClearBtn");
+    const hwDownloadBtn = document.getElementById("hwDownloadBtn");
+    const hwCloseBtn = document.getElementById("hwCloseBtn");
+    const toggleHWBtn = document.getElementById("toggleHandwriting");
+
+    // Advanced control elements
+    const hwColorPicker = document.getElementById("hwColorPicker");
+    const hwBgColorPicker = document.getElementById("hwBgColorPicker");
+    const hwGridSpacingSlider = document.getElementById("hwGridSpacing");
+
+    const hwBgCtx = hwBgCanvas.getContext("2d");
+    const hwDrawCtx = hwDrawCanvas.getContext("2d");
+
+    // Default sizes and state for handwriting
+    let hwPenSize = 2;
+    let hwEraserSize = 10;
+    let hwPenColor = "#000000";
+    let hwBgColor = "#cccccc";
+    let hwGridSpacing = 20;
+    // Tool can be "pen", "eraser", or "pan"
+    let hwCurrentTool = "pen";
+    let hwDrawing = false;
+    let hwCurrentStroke = null;
+    let hwStrokes = [];
+    let hwUndoneStrokes = [];
+    
+    // Variables for panning
+    let hwPanning = false;
+    let panStartX = 0, panStartY = 0;
+    let initialWorldOffsetX = 0, initialWorldOffsetY = 0;
+
+    // Resize the handwriting canvases to fill the viewport
+    function hwResizeCanvas() {
+      hwBgCanvas.width = hwDrawCanvas.width = window.innerWidth;
+      hwBgCanvas.height = hwDrawCanvas.height = window.innerHeight;
+      hwDrawBackground();
+      hwRedrawAllStrokes();
+    }
+    window.addEventListener("resize", hwResizeCanvas);
+    hwResizeCanvas();
+
+    // Draw the infinite grid using the world offset
+    function hwDrawBackground() {
+      hwBgCtx.fillStyle = hwBgColor;
+      hwBgCtx.fillRect(0, 0, hwBgCanvas.width, hwBgCanvas.height);
+      hwBgCtx.fillStyle = "white";
+      // Calculate starting positions based on world offset and grid spacing
+      const remainderX = worldOffsetX % hwGridSpacing;
+      const remainderY = worldOffsetY % hwGridSpacing;
+      const startX = -remainderX;
+      const startY = -remainderY;
+      for (let x = startX; x < hwBgCanvas.width; x += hwGridSpacing) {
+        for (let y = startY; y < hwBgCanvas.height; y += hwGridSpacing) {
+          hwBgCtx.beginPath();
+          hwBgCtx.arc(x, y, 1.5, 0, Math.PI * 2);
+          hwBgCtx.fill();
+        }
+      }
+    }
+
+    // Draw smooth strokes using stored world coordinates
+    function hwDrawSmoothLine(ctx, points, tool, size, color) {
+      if(points.length < 2) return;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = size;
+      if(tool === "pen") {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = color;
+      } else if(tool === "eraser") {
+        ctx.globalCompositeOperation = "destination-out";
+      }
+      ctx.beginPath();
+      ctx.moveTo(points[0].x - worldOffsetX, points[0].y - worldOffsetY);
+      if(points.length === 2) {
+        ctx.lineTo(points[1].x - worldOffsetX, points[1].y - worldOffsetY);
+      } else {
+        for (let i = 0; i < points.length - 1; i++) {
+          const midPoint = {
+            x: (points[i].x + points[i+1].x) / 2 - worldOffsetX,
+            y: (points[i].y + points[i+1].y) / 2 - worldOffsetY
+          };
+          if(i === 0) {
+            ctx.lineTo(midPoint.x, midPoint.y);
+          } else {
+            ctx.quadraticCurveTo(points[i].x - worldOffsetX, points[i].y - worldOffsetY, midPoint.x, midPoint.y);
+          }
+        }
+        const lastPoint = points[points.length - 1];
+        ctx.lineTo(lastPoint.x - worldOffsetX, lastPoint.y - worldOffsetY);
+      }
+      ctx.stroke();
+    }
+
+    // Redraw all strokes and the current stroke
+    function hwRedrawAllStrokes() {
+      hwDrawCtx.clearRect(0, 0, hwDrawCanvas.width, hwDrawCanvas.height);
+      hwStrokes.forEach(stroke => {
+        hwDrawSmoothLine(hwDrawCtx, stroke.points, stroke.tool, stroke.size, stroke.color);
+      });
+      if(hwCurrentStroke) {
+        hwDrawSmoothLine(hwDrawCtx, hwCurrentStroke.points, hwCurrentStroke.tool, hwCurrentStroke.size, hwCurrentStroke.color);
+      }
+    }
+
+    // Use getBoundingClientRect to get exact cursor position relative to the canvas
+    function getCanvasCoords(e) {
+  const rect = hwDrawCanvas.getBoundingClientRect();
+  // Change these offsets as desired.
+  const offsetX = 250; // Move drawing 5 pixels to the right relative to cursor
+  const offsetY = 5; // Move drawing 5 pixels down relative to cursor
+  return {
+    x: e.clientX - rect.left + offsetX,
+    y: e.clientY - rect.top + offsetY
+  };
+}
+
+
+    // When not panning, start a new stroke using the tip of the cursor
+    function hwStartDrawing(e) {
+      const coords = getCanvasCoords(e);
+      hwDrawing = true;
+      hwUndoneStrokes = [];
+      const point = { x: coords.x + worldOffsetX, y: coords.y + worldOffsetY };
+      hwCurrentStroke = {
+        tool: hwCurrentTool,
+        points: [point],
+        size: hwCurrentTool === "pen" ? hwPenSize : hwEraserSize,
+        color: hwCurrentTool === "pen" ? hwPenColor : null
+      };
+    }
+
+    // Record stroke points (based on cursor tip)
+    function hwDraw(e) {
+      if(!hwDrawing) return;
+      const coords = getCanvasCoords(e);
+      hwCurrentStroke.points.push({ x: coords.x + worldOffsetX, y: coords.y + worldOffsetY });
+      hwCurrentStroke.size = hwCurrentTool === "pen" ? hwPenSize : hwEraserSize;
+      hwRedrawAllStrokes();
+    }
+
+    // End the current stroke and save it for the current note
+    function hwEndDrawing() {
+      if(!hwDrawing) return;
+      hwDrawing = false;
+      hwStrokes.push(hwCurrentStroke);
+      hwCurrentStroke = null;
+      hwRedrawAllStrokes();
+      hwSaveDrawingForCurrentNote();
+    }
+
+    // Panning: update world offset based on mouse movement
+    hwDrawCanvas.addEventListener("mousedown", function(e) {
+      if (hwCurrentTool === "pan") {
+        hwPanning = true;
+        panStartX = e.clientX;
+        panStartY = e.clientY;
+        initialWorldOffsetX = worldOffsetX;
+        initialWorldOffsetY = worldOffsetY;
+      } else {
+        hwStartDrawing(e);
+      }
+    });
+    hwDrawCanvas.addEventListener("mousemove", function(e) {
+      if (hwCurrentTool === "pan" && hwPanning) {
+        const dx = e.clientX - panStartX;
+        const dy = e.clientY - panStartY;
+        worldOffsetX = initialWorldOffsetX - dx;
+        worldOffsetY = initialWorldOffsetY - dy;
+        hwDrawBackground();
+        hwRedrawAllStrokes();
+      } else if (hwCurrentTool !== "pan" && hwDrawing) {
+        hwDraw(e);
+      }
+    });
+    hwDrawCanvas.addEventListener("mouseup", function(e) {
+      if (hwCurrentTool === "pan" && hwPanning) {
+        hwPanning = false;
+        hwSaveDrawingForCurrentNote();
+      } else {
+        hwEndDrawing();
+      }
+    });
+    hwDrawCanvas.addEventListener("mouseout", function(e) {
+      if (hwCurrentTool === "pan" && hwPanning) {
+        hwPanning = false;
+        hwSaveDrawingForCurrentNote();
+      } else {
+        hwEndDrawing();
+      }
+    });
+
+    // Adjust tool size with mouse wheel
+    hwDrawCanvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 1 : -1;
+      if(hwCurrentTool === "pen") {
+        hwPenSize = Math.max(1, hwPenSize + delta);
+        if(hwCurrentStroke && hwCurrentStroke.tool === "pen") {
+          hwCurrentStroke.size = hwPenSize;
+          hwRedrawAllStrokes();
+        }
+      } else if(hwCurrentTool === "eraser") {
+        hwEraserSize = Math.max(1, hwEraserSize + delta);
+        if(hwCurrentStroke && hwCurrentStroke.tool === "eraser") {
+          hwCurrentStroke.size = hwEraserSize;
+          hwRedrawAllStrokes();
+        }
+      }
+    });
+
+    // Handwriting control buttons
+    hwPenBtn.addEventListener("click", () => {
+      hwCurrentTool = "pen";
+      hwPenBtn.style.backgroundColor = "#ddd";
+      hwEraserBtn.style.backgroundColor = "";
+      hwPanBtn.style.backgroundColor = "";
+    });
+    hwEraserBtn.addEventListener("click", () => {
+      hwCurrentTool = "eraser";
+      hwEraserBtn.style.backgroundColor = "#ddd";
+      hwPenBtn.style.backgroundColor = "";
+      hwPanBtn.style.backgroundColor = "";
+    });
+    hwPanBtn.addEventListener("click", () => {
+      hwCurrentTool = "pan";
+      hwPanBtn.style.backgroundColor = "#ddd";
+      hwPenBtn.style.backgroundColor = "";
+      hwEraserBtn.style.backgroundColor = "";
+    });
+    hwUndoBtn.addEventListener("click", () => {
+      if(hwStrokes.length > 0) {
+        hwUndoneStrokes.push(hwStrokes.pop());
+        hwRedrawAllStrokes();
+        hwSaveDrawingForCurrentNote();
+      }
+    });
+    hwRedoBtn.addEventListener("click", () => {
+      if(hwUndoneStrokes.length > 0) {
+        hwStrokes.push(hwUndoneStrokes.pop());
+        hwRedrawAllStrokes();
+        hwSaveDrawingForCurrentNote();
+      }
+    });
+    hwClearBtn.addEventListener("click", () => {
+      hwStrokes = [];
+      hwUndoneStrokes = [];
+      hwRedrawAllStrokes();
+      hwSaveDrawingForCurrentNote();
+    });
+    hwDownloadBtn.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = "handwritten-notes.png";
+      link.href = hwDrawCanvas.toDataURL();
+      link.click();
+    });
+    hwCloseBtn.addEventListener("click", () => {
+      hwSaveDrawingForCurrentNote();
+      hwWorkspace.style.display = "none";
+    });
+
+    // Advanced control event listeners
+    hwColorPicker.addEventListener("change", (e) => {
+      hwPenColor = e.target.value;
+    });
+    hwBgColorPicker.addEventListener("change", (e) => {
+      hwBgColor = e.target.value;
+      hwDrawBackground();
+    });
+    hwGridSpacingSlider.addEventListener("input", (e) => {
+      hwGridSpacing = parseInt(e.target.value, 10);
+      hwDrawBackground();
+    });
+
+    // Save and load handwriting drawing specific to the current note
+    function hwSaveDrawingForCurrentNote() {
+      if (currentNoteId) {
+        const drawingData = {
+          strokes: hwStrokes,
+          worldOffsetX: worldOffsetX,
+          worldOffsetY: worldOffsetY
+        };
+        localStorage.setItem("handwritingDrawing_" + currentNoteId, JSON.stringify(drawingData));
+      }
+    }
+    function hwLoadDrawingForCurrentNote() {
+      if (currentNoteId) {
+        const data = localStorage.getItem("handwritingDrawing_" + currentNoteId);
+        if(data) {
+          const drawingData = JSON.parse(data);
+          hwStrokes = drawingData.strokes || [];
+          worldOffsetX = drawingData.worldOffsetX || 0;
+          worldOffsetY = drawingData.worldOffsetY || 0;
+        } else {
+          hwStrokes = [];
+          worldOffsetX = 0;
+          worldOffsetY = 0;
+        }
+      }
+    }
+
+    // Toggle handwriting workspace: load the current note's drawing
+    toggleHWBtn.addEventListener("click", () => {
+      if(!currentNoteId) {
+        alert("Please select a note first.");
+        return;
+      }
+      hwLoadDrawingForCurrentNote();
+      hwDrawBackground();
+      hwRedrawAllStrokes();
+      hwWorkspace.style.display = "block";
+    });
+  </script>
+</body>
+</html>
