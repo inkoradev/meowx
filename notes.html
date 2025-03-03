@@ -1,327 +1,637 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Termux | Notes</title>
-<link rel="icon" href=
-"https://i.ibb.co/DS0gDns/T-1-removebg-preview.png"
-        type="image/x-icon" />
-    <style>
-        body {
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            background-color: #1e1e1e;
-            color: #dcdcdc;
-            height: 100vh;
-            display: flex;
-        }
-
-        .app {
-            display: flex;
-            width: 100%;
-        }
-
-        .sidebar {
-            width: 300px;
-            background: #252526;
-            border-right: 1px solid #3c3c3c;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .sidebar h2 {
-            font-size: 1.2rem;
-            color: #ffffff;
-            margin: 0;
-        }
-
-        .folder-list, .note-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-
-        .folder-list li, .note-list li {
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            background: #2d2d2d;
-            margin-bottom: 10px;
-            transition: background 0.2s;
-        }
-
-        .folder-list li:hover, .note-list li:hover, .folder-list li.active {
-            background: #3c3c3c;
-        }
-
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-
-        .note-title {
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-            border: none;
-            border-bottom: 2px solid #3c3c3c;
-            background: #1e1e1e;
-            color: #ffffff;
-            outline: none;
-            padding: 5px 0;
-        }
-
-        .note-content {
-            flex-grow: 1;
-            font-size: 1rem;
-            border: none;
-            outline: none;
-            background: #1e1e1e;
-            color: #dcdcdc;
-            padding: 10px;
-            resize: none;
-            margin-top: 10px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        button {
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-
-        .add-note, .add-folder {
-            background-color: #3a9ad9;
-            color: white;
-        }
-
-        .add-note:hover, .add-folder:hover {
-            background-color: #358bbf;
-        }
-
-        .delete-note {
-            background-color: #f14c4c;
-            color: white;
-        }
-
-        .delete-note:hover {
-            background-color: #d94343;
-        }
-
-        .delete-folder {
-    background-color: #f14c4c;
-    color: white;
-}
-.delete-folder:hover {
-    background-color: #d94343;
-}
-
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Termux | Notes</title>
+  <link rel="icon" href="https://i.ibb.co/DS0gDns/T-1-removebg-preview.png" type="image/x-icon" />
+  <!-- SimpleMDE CSS for Markdown & rich text editing -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+  <style>
+    /* Global styles */
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      background-color: #1e1e1e;
+      color: #dcdcdc;
+      height: 100vh;
+      display: flex;
+    }
+    .app {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    /* Sidebar styles */
+    .sidebar {
+      width: 300px;
+      background: #252526;
+      border-right: 1px solid #3c3c3c;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      overflow-y: auto;
+      position: relative;
+      min-width: 150px;
+      max-width: 500px;
+    }
+    /* Resizer Handle for Sidebar */
+    #sidebarResizer {
+      width: 5px;
+      cursor: col-resize;
+      background: #3c3c3c;
+      height: 100%;
+    }
+    /* Sidebar header shows website name */
+    .sidebar h2 {
+      font-size: 1.2rem;
+      color: #ffffff;
+      margin: 0;
+      text-align: center;
+    }
+    /* Search input in sidebar */
+    #searchInput {
+      width: 100%;
+      padding: 5px;
+      margin: 5px 0;
+      border: 1px solid #3c3c3c;
+      background: #1e1e1e;
+      color: #dcdcdc;
+    }
+    /* Smaller action buttons */
+    .sidebar button {
+      padding: 5px 8px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .add-folder, .add-note {
+      background-color: #3a9ad9;
+      color: white;
+    }
+    .add-folder:hover, .add-note:hover {
+      background-color: #358bbf;
+    }
+    /* Folder list styling: Minimal, similar to Obsidian */
+    .folder-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      flex-grow: 1;
+    }
+    .folder-list li {
+      padding: 4px 0;
+      margin-bottom: 4px;
+      background: transparent;
+    }
+    .folder-list li.active > div > span[data-type="folder"] {
+      font-weight: bold;
+      color: #ffffff;
+    }
+    /* Nested note list styling (minimal thread-like look) */
+    .folder-list li ul {
+      list-style: none;
+      padding-left: 10px;
+      margin: 5px 0 0 15px;
+      border-left: 1px solid #555;
+    }
+    .folder-list li ul li {
+      padding: 2px 0 2px 10px;
+      background: transparent;
+      margin: 0;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .folder-list li ul li:hover,
+    .folder-list li ul li.active {
+      color: #fff;
+      font-weight: bold;
+    }
+    /* Main workspace styles */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .note-title {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+      border: none;
+      border-bottom: 2px solid #3c3c3c;
+      background: #1e1e1e;
+      color: #ffffff;
+      outline: none;
+      padding: 5px 0;
+    }
+    /* Hide the original textarea as SimpleMDE will replace it */
+    .note-content {
+      display: none;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    /* Custom Context Menu styling */
+    #contextMenu {
+      display: none;
+      position: absolute;
+      background: #252526;
+      border: 1px solid #3c3c3c;
+      padding: 5px;
+      z-index: 1000;
+      width: 150px;
+      font-size: 0.8rem;
+    }
+    #contextMenu div {
+      padding: 5px;
+      cursor: pointer;
+    }
+    #contextMenu div:hover {
+      background: #3c3c3c;
+    }
+    /* Custom Pop-Up Message styling */
+    #popupMessage {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      display: none;
+      z-index: 2000;
+      font-size: 0.9rem;
+    }
+    /* SimpleMDE Dark Theme Overrides */
+    .SimpleMDEContainer {
+      background: #1e1e1e !important;
+      border: none !important;
+    }
+    .CodeMirror {
+      background: #1e1e1e !important;
+      color: #dcdcdc !important;
+      border: none;
+    }
+    .CodeMirror-scroll {
+      background: #1e1e1e !important;
+    }
+    .CodeMirror-gutters {
+      background: #1e1e1e !important;
+      border-right: 1px solid #3c3c3c !important;
+    }
+    .CodeMirror-cursor {
+      border-left: 1px solid #dcdcdc !important;
+    }
+    .editor-toolbar {
+      background: #252526 !important;
+      border: none !important;
+    }
+    .editor-toolbar a,
+    .editor-toolbar a:hover,
+    .editor-toolbar a:focus {
+      color: #dcdcdc !important;
+    }
+    .editor-toolbar a:hover {
+      background: #3c3c3c !important;
+      color: #a0a0a0 !important;
+    }
+    .editor-statusbar {
+      background: #252526 !important;
+      color: #dcdcdc !important;
+      border: none !important;
+    }
+    .editor-preview,
+    .editor-preview-side {
+      background: #1e1e1e !important;
+      color: #dcdcdc !important;
+    }
+    .CodeMirror ::selection {
+      background: rgba(85, 85, 85, 0.5) !important;
+    }
+    .CodeMirror ::-moz-selection {
+      background: rgba(85, 85, 85, 0.5) !important;
+    }
+  </style>
 </head>
 <body>
-    <div class="app">
-        <div class="sidebar">
-            <h2>Folders</h2>
-            <button class="add-folder">+ Add Folder</button>
-            <button class="delete-folder">Delete Folder</button>
-            <ul class="folder-list"></ul>
-        </div>
-        <div class="sidebar">
-            <h2>Notes</h2>
-            <button class="add-note">+ Add Note</button>
-            <ul class="note-list"></ul>
-        </div>
-        <div class="main">
-            <input type="text" class="note-title" placeholder="Title...">
-            <textarea class="note-content" placeholder="Write your note here..."></textarea>
-            <div class="actions">
-                <button class="delete-note">Delete Note</button>
-            </div>
-        </div>
+  <div class="app">
+    <!-- Sidebar: Website name and folders -->
+    <div class="sidebar">
+      <h2>TERMUX</h2>
+      <input type="text" id="searchInput" placeholder="Search..." />
+      <button class="add-folder">+ Add Folder</button>
+      <ul class="folder-list"></ul>
+      <button class="add-note">+ Add Note</button>
     </div>
+    <!-- Resizer handle between sidebar and main -->
+    <div id="sidebarResizer"></div>
+    <!-- Main workspace for editing notes -->
+    <div class="main">
+      <input type="text" class="note-title" placeholder="Title..." />
+      <!-- SimpleMDE will replace this textarea -->
+      <textarea class="note-content" placeholder="Write your note here..."></textarea>
+      <div class="actions">
+        <!-- No additional action buttons -->
+      </div>
+    </div>
+  </div>
 
-    <script>
-        const folderList = document.querySelector('.folder-list');
-        const notesList = document.querySelector('.note-list');
-        const noteTitle = document.querySelector('.note-title');
-        const noteContent = document.querySelector('.note-content');
-        const addFolderButton = document.querySelector('.add-folder');
-        const addNoteButton = document.querySelector('.add-note');
-        const deleteNoteButton = document.querySelector('.delete-note');
+  <!-- Custom Context Menu (populated dynamically) -->
+  <div id="contextMenu"></div>
+  <!-- Custom Pop-Up Message for notifications -->
+  <div id="popupMessage"></div>
 
-        let data = JSON.parse(localStorage.getItem('obsidianData')) || { folders: [], notes: [] };
-        let currentFolderId = null;
-        let currentNoteId = null;
-
-        function renderFolders() {
-            folderList.innerHTML = '';
-            data.folders.forEach(folder => {
-                const li = document.createElement('li');
-                li.textContent = folder.name || 'Untitled Folder';
-                li.dataset.id = folder.id;
-                li.classList.toggle('active', folder.id === currentFolderId);
-                li.addEventListener('click', () => selectFolder(folder.id));
-                folderList.appendChild(li);
-            });
-        }
-
-        function renderNotes() {
-            notesList.innerHTML = '';
-            if (!currentFolderId) return;
-            const notesInFolder = data.notes.filter(note => note.folderId === currentFolderId);
-            notesInFolder.forEach(note => {
-                const li = document.createElement('li');
-                li.textContent = note.title || 'Untitled Note';
-                li.dataset.id = note.id;
-                li.classList.toggle('active', note.id === currentNoteId);
-                li.addEventListener('click', () => selectNote(note.id));
-                notesList.appendChild(li);
-            });
-        }
-
-        function selectFolder(id) {
-            currentFolderId = id;
-            currentNoteId = null;
-            noteTitle.value = '';
-            noteContent.value = '';
-            renderFolders();
-            renderNotes();
-        }
-
-        function selectNote(id) {
-            const note = data.notes.find(n => n.id === id);
-            if (note) {
-                currentNoteId = id;
-                noteTitle.value = note.title;
-                noteContent.value = note.content;
-            }
-            renderNotes();
-        }
-
-        function saveNote() {
-            if (!currentFolderId) return;
-
-            if (currentNoteId) {
-                const note = data.notes.find(n => n.id === currentNoteId);
-                note.title = noteTitle.value;
-                note.content = noteContent.value;
-            } else {
-                const newNote = {
-                    id: Date.now(),
-                    folderId: currentFolderId,
-                    title: noteTitle.value,
-                    content: noteContent.value
-                };
-                data.notes.push(newNote);
-                currentNoteId = newNote.id;
-            }
-            localStorage.setItem('obsidianData', JSON.stringify(data));
-            renderNotes();
-        }
-
-        function addFolder() {
-            const newFolder = {
-                id: Date.now(),
-                name: `New Folder ${data.folders.length + 1}`
-            };
-            data.folders.push(newFolder);
-            localStorage.setItem('obsidianData', JSON.stringify(data));
-            renderFolders();
-        }
-        const deleteFolderButton = document.querySelector('.delete-folder');
-
-function deleteFolder() {
-    if (!currentFolderId) return;
-
-    // Confirm deletion
-    const confirmDelete = confirm('Are you sure you want to delete this folder and all its notes?');
-    if (!confirmDelete) return;
-
-    // Remove the folder
-    data.folders = data.folders.filter(folder => folder.id !== currentFolderId);
-    // Remove associated notes
-    data.notes = data.notes.filter(note => note.folderId !== currentFolderId);
-
-    // Reset current folder and note selection
-    currentFolderId = null;
-    currentNoteId = null;
-
-    // Save changes and re-render
-    localStorage.setItem('obsidianData', JSON.stringify(data));
-    renderFolders();
-    renderNotes();
-    noteTitle.value = '';
-    noteContent.value = '';
-}
-
-// Attach the event listener
-deleteFolderButton.addEventListener('click', deleteFolder);
-
-        function addNote() {
-            saveNote();
-            noteTitle.value = '';
-            noteContent.value = '';
-            currentNoteId = null;
-        }
-
-        function deleteNote() {
-            if (currentNoteId) {
-                data.notes = data.notes.filter(note => note.id !== currentNoteId);
-                localStorage.setItem('obsidianData', JSON.stringify(data));
-                noteTitle.value = '';
-                noteContent.value = '';
-                currentNoteId = null;
-                renderNotes();
-            }
-        }
-
-        noteTitle.addEventListener('input', saveNote);
-        noteContent.addEventListener('input', saveNote);
-        addFolderButton.addEventListener('click', addFolder);
-        addNoteButton.addEventListener('click', addNote);
-        deleteNoteButton.addEventListener('click', deleteNote);
-
-        renderFolders();
-        renderNotes();function renameFolder(folderId) {
-    const folder = data.folders.find(f => f.id === folderId);
-    if (folder) {
-        const newName = prompt('Enter new folder name:', folder.name);
-        if (newName && newName.trim() !== '') {
-            folder.name = newName.trim();
-            localStorage.setItem('obsidianData', JSON.stringify(data));
-            renderFolders();
-        }
-    }
-}
-
-function renderFolders() {
-    folderList.innerHTML = '';
-    data.folders.forEach(folder => {
-        const li = document.createElement('li');
-        li.textContent = folder.name || 'Untitled Folder';
-        li.dataset.id = folder.id;
-        li.classList.toggle('active', folder.id === currentFolderId);
-        li.addEventListener('click', () => selectFolder(folder.id));
-        li.addEventListener('dblclick', () => renameFolder(folder.id)); // Added double-click event
-        folderList.appendChild(li);
+  <!-- SimpleMDE JS for Markdown & rich text editing -->
+  <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+  <script>
+    // Initialize SimpleMDE on the textarea with dark theme overrides
+    var simplemde = new SimpleMDE({ 
+      element: document.querySelector(".note-content"),
+      spellChecker: false,
+      status: false
     });
-}
+    
+    // DOM element references
+    const sidebar = document.querySelector('.sidebar');
+    const resizer = document.getElementById("sidebarResizer");
+    const folderList = document.querySelector('.folder-list');
+    const noteTitle = document.querySelector('.note-title');
+    const addFolderButton = document.querySelector('.add-folder');
+    const addNoteButton = document.querySelector('.add-note');
+    const contextMenu = document.getElementById('contextMenu');
+    const popupMessage = document.getElementById('popupMessage');
+    const searchInput = document.getElementById('searchInput');
 
-    </script>
+    // Global data and context variables
+    let data = JSON.parse(localStorage.getItem('obsidianData')) || { folders: [], notes: [] };
+    let currentFolderId = null;
+    let currentNoteId = null;
+    let contextItemType = null; // "folder", "note", or "generic"
+    let contextItemId = null;
+
+    // Save data to localStorage
+    function saveData() {
+      localStorage.setItem('obsidianData', JSON.stringify(data));
+    }
+
+    // Show custom pop-up message (auto hides after 3 seconds)
+    function showPopupMessage(message) {
+      popupMessage.textContent = message;
+      popupMessage.style.display = 'block';
+      setTimeout(() => { popupMessage.style.display = 'none'; }, 3000);
+    }
+
+    // Enable resizing of the sidebar via the resizer handle
+    resizer.addEventListener('mousedown', initResize);
+    function initResize(e) {
+      document.addEventListener('mousemove', resizeSidebar);
+      document.addEventListener('mouseup', stopResize);
+    }
+    function resizeSidebar(e) {
+      const newWidth = e.clientX;
+      if(newWidth < 150) return;
+      if(newWidth > 500) return;
+      sidebar.style.width = newWidth + "px";
+    }
+    function stopResize(e) {
+      document.removeEventListener('mousemove', resizeSidebar);
+      document.removeEventListener('mouseup', stopResize);
+    }
+
+    // Drag and Drop functions for folders
+    function dragStartFolder(e) {
+      e.dataTransfer.setData("text/plain", e.currentTarget.dataset.id);
+      e.dataTransfer.effectAllowed = "move";
+    }
+    function dragOverFolder(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
+    function dropFolder(e) {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData("text/plain");
+      const targetId = e.currentTarget.dataset.id;
+      if(draggedId === targetId) return;
+      let draggedIndex = data.folders.findIndex(f => f.id == draggedId);
+      let targetIndex = data.folders.findIndex(f => f.id == targetId);
+      if(draggedIndex >= 0 && targetIndex >= 0) {
+        const [draggedFolder] = data.folders.splice(draggedIndex, 1);
+        data.folders.splice(targetIndex, 0, draggedFolder);
+        saveData();
+        renderFolders();
+      }
+    }
+
+    // Drag and Drop functions for notes (within the same folder)
+    function dragStartNote(e) {
+      e.dataTransfer.setData("text/plain", e.currentTarget.dataset.id);
+      e.dataTransfer.effectAllowed = "move";
+    }
+    function dragOverNote(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
+    function dropNote(e) {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData("text/plain");
+      const targetId = e.currentTarget.dataset.id;
+      let draggedIndex = data.notes.findIndex(n => n.id == draggedId && n.folderId == currentFolderId);
+      let targetIndex = data.notes.findIndex(n => n.id == targetId && n.folderId == currentFolderId);
+      if(draggedIndex < 0 || targetIndex < 0) return;
+      const [draggedNote] = data.notes.splice(draggedIndex, 1);
+      data.notes.splice(targetIndex, 0, draggedNote);
+      saveData();
+      renderFolders();
+    }
+
+    // Render folders and nested notes with filtering (search functionality)
+    function renderFolders() {
+      const searchTerm = searchInput.value.toLowerCase();
+      folderList.innerHTML = '';
+      data.folders.forEach(folder => {
+        const folderMatches = folder.name.toLowerCase().includes(searchTerm);
+        const notesInFolder = data.notes.filter(note => note.folderId == folder.id);
+        const filteredNotes = notesInFolder.filter(note => note.title.toLowerCase().includes(searchTerm));
+        if(searchTerm && !folderMatches && filteredNotes.length === 0) return;
+        const li = document.createElement('li');
+        li.dataset.id = folder.id;
+        li.classList.toggle('active', folder.id == currentFolderId);
+        li.setAttribute("draggable", "true");
+        li.addEventListener("dragstart", dragStartFolder);
+        li.addEventListener("dragover", dragOverFolder);
+        li.addEventListener("drop", dropFolder);
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.style.display = 'flex';
+        headerDiv.style.alignItems = 'center';
+        
+        const toggleIcon = document.createElement('span');
+        toggleIcon.textContent = folder.expanded ? '▾' : '▸';
+        toggleIcon.style.marginRight = '5px';
+        toggleIcon.style.cursor = 'pointer';
+        toggleIcon.addEventListener('click', (e) => { e.stopPropagation(); toggleFolder(folder.id); });
+        headerDiv.appendChild(toggleIcon);
+        
+        const folderName = document.createElement('span');
+        folderName.textContent = folder.name || 'Untitled Folder';
+        folderName.style.cursor = 'pointer';
+        folderName.dataset.type = 'folder';
+        folderName.dataset.id = folder.id;
+        let clickTimer = null;
+        folderName.addEventListener('click', (e) => {
+          if(clickTimer) clearTimeout(clickTimer);
+          clickTimer = setTimeout(() => { selectFolder(folder.id); clickTimer = null; }, 250);
+        });
+        folderName.addEventListener('dblclick', (e) => {
+          if(clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+          inlineRenameFolder(folder.id);
+        });
+        headerDiv.appendChild(folderName);
+        li.appendChild(headerDiv);
+        
+        if(folder.expanded) {
+          const nestedUl = document.createElement('ul');
+          const notesToRender = searchTerm ? filteredNotes : notesInFolder;
+          notesToRender.forEach(note => {
+            const noteLi = document.createElement('li');
+            noteLi.textContent = note.title || 'Untitled Note';
+            noteLi.dataset.type = 'note';
+            noteLi.dataset.id = note.id;
+            noteLi.classList.toggle('active', note.id == currentNoteId);
+            noteLi.style.cursor = 'pointer';
+            noteLi.setAttribute("draggable", "true");
+            noteLi.addEventListener("dragstart", dragStartNote);
+            noteLi.addEventListener("dragover", dragOverNote);
+            noteLi.addEventListener("drop", dropNote);
+            noteLi.addEventListener('click', (e) => { e.stopPropagation(); selectNote(note.id); });
+            // Enable inline renaming on double-click for notes
+            noteLi.addEventListener('dblclick', (e) => {
+              e.stopPropagation();
+              inlineRenameNote(note.id);
+            });
+            nestedUl.appendChild(noteLi);
+          });
+          li.appendChild(nestedUl);
+        }
+        folderList.appendChild(li);
+      });
+    }
+    
+    // Select a folder (clears note selection)
+    function selectFolder(id) {
+      currentFolderId = id;
+      currentNoteId = null;
+      noteTitle.value = '';
+      simplemde.value('');
+      renderFolders();
+    }
+    
+    // Select a note and load its content into the editor
+    function selectNote(id) {
+      const note = data.notes.find(n => n.id == id);
+      if(note) {
+        currentNoteId = id;
+        noteTitle.value = note.title;
+        simplemde.value(note.content);
+      }
+      renderFolders();
+    }
+    
+    // Save note (update existing or create new)
+    function saveNote() {
+      if(!currentFolderId) return;
+      if(currentNoteId) {
+        const note = data.notes.find(n => n.id == currentNoteId);
+        note.title = noteTitle.value;
+        note.content = simplemde.value();
+      } else {
+        const newNote = {
+          id: Date.now(),
+          folderId: currentFolderId,
+          title: noteTitle.value || 'New Note',
+          content: simplemde.value()
+        };
+        data.notes.push(newNote);
+        currentNoteId = newNote.id;
+      }
+      saveData();
+      renderFolders();
+    }
+    
+    // Add a new folder
+    function addFolder() {
+      const newFolder = {
+        id: Date.now(),
+        name: `New Folder ${data.folders.length + 1}`,
+        expanded: true
+      };
+      data.folders.push(newFolder);
+      saveData();
+      renderFolders();
+    }
+    
+    // Add a new note in the current folder
+    function addNote() {
+      if(!currentFolderId) {
+        showPopupMessage("Please select a folder to add a note.");
+        return;
+      }
+      const newNote = {
+        id: Date.now(),
+        folderId: currentFolderId,
+        title: `New Note ${data.notes.filter(n => n.folderId == currentFolderId).length + 1}`,
+        content: ""
+      };
+      data.notes.push(newNote);
+      saveData();
+      renderFolders();
+      selectNote(newNote.id);
+    }
+    
+    // Inline renaming of a folder (editable in place)
+    function inlineRenameFolder(folderId) {
+      const folder = data.folders.find(f => f.id == folderId);
+      if(folder) {
+        const folderNameElement = document.querySelector(`span[data-type="folder"][data-id="${folderId}"]`);
+        if(folderNameElement) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = folder.name;
+          input.style.fontSize = 'inherit';
+          input.style.fontFamily = 'inherit';
+          input.style.background = 'transparent';
+          input.style.border = 'none';
+          input.style.outline = 'none';
+          input.style.color = '#dcdcdc';
+          input.style.width = '100%';
+          folderNameElement.parentNode.replaceChild(input, folderNameElement);
+          input.focus();
+          input.select();
+          input.addEventListener('blur', () => {
+            const newName = input.value.trim();
+            if(newName) { folder.name = newName; }
+            saveData();
+            renderFolders();
+          });
+          input.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') { input.blur(); }
+          });
+        }
+      }
+    }
+    
+    // Inline renaming of a note (editable in place)
+    function inlineRenameNote(noteId) {
+      const note = data.notes.find(n => n.id == noteId);
+      if(note) {
+        // Find the note element in the sidebar.
+        const noteElement = document.querySelector(`li[data-type="note"][data-id="${noteId}"]`);
+        if(noteElement) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = note.title;
+          input.style.fontSize = 'inherit';
+          input.style.fontFamily = 'inherit';
+          input.style.background = 'transparent';
+          input.style.border = 'none';
+          input.style.outline = 'none';
+          input.style.color = '#dcdcdc';
+          input.style.width = '100%';
+          noteElement.parentNode.replaceChild(input, noteElement);
+          input.focus();
+          input.select();
+          input.addEventListener('blur', () => {
+            const newTitle = input.value.trim();
+            if(newTitle) { note.title = newTitle; }
+            saveData();
+            renderFolders();
+          });
+          input.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') { input.blur(); }
+          });
+        }
+      }
+    }
+    
+    // (Optional) For notes, you can also support a right-click context menu option
+    // to trigger inline renaming.
+    
+    sidebar.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      let targetType = e.target.dataset.type;
+      let targetId = e.target.dataset.id;
+      let menuItems = [];
+      if(targetType === "folder") {
+        menuItems = [
+          { action: "folderAddNote", label: "Add New Note" },
+          { action: "folderRename", label: "Rename Folder" }
+        ];
+        contextItemType = "folder";
+        contextItemId = targetId;
+      } else if(targetType === "note") {
+        menuItems = [
+          { action: "noteRename", label: "Rename Note" }
+        ];
+        contextItemType = "note";
+        contextItemId = targetId;
+      } else {
+        menuItems = [];
+        if(currentNoteId) {
+          menuItems.push({ action: "genericRenameNote", label: "Rename Note" });
+        }
+        menuItems.push({ action: "genericAddNote", label: "Add Note" });
+        menuItems.push({ action: "genericAddFolder", label: "Add Folder" });
+        contextItemType = "generic";
+        contextItemId = null;
+      }
+      contextMenu.innerHTML = "";
+      menuItems.forEach(item => {
+        const div = document.createElement("div");
+        div.textContent = item.label;
+        div.dataset.action = item.action;
+        contextMenu.appendChild(div);
+      });
+      contextMenu.style.display = "block";
+      contextMenu.style.left = e.pageX + "px";
+      contextMenu.style.top = e.pageY + "px";
+    });
+    
+    document.addEventListener("click", () => {
+      contextMenu.style.display = "none";
+    });
+    
+    contextMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const action = e.target.dataset.action;
+      if(!action) return;
+      if(action === "folderAddNote") { currentFolderId = contextItemId; addNote(); }
+      else if(action === "folderRename") { inlineRenameFolder(contextItemId); }
+      else if(action === "noteRename") { inlineRenameNote(contextItemId); }
+      else if(action === "genericRenameNote") { if(currentNoteId) inlineRenameNote(currentNoteId); }
+      else if(action === "genericAddNote") { addNote(); }
+      else if(action === "genericAddFolder") { addFolder(); }
+      contextMenu.style.display = "none";
+    });
+    
+    noteTitle.addEventListener("input", saveNote);
+    simplemde.codemirror.on("change", saveNote);
+    
+    addFolderButton.addEventListener("click", addFolder);
+    addNoteButton.addEventListener("click", addNote);
+    
+    searchInput.addEventListener("input", renderFolders);
+    
+    renderFolders();
+  </script>
 </body>
 </html>
