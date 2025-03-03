@@ -319,6 +319,9 @@
             } else if (command === "!dictionary") {
                 window.open('https://jeffvscblogs.github.io/lamadictionary/');
                 typeText(outputDiv, `Woah New word alr! YOu are a genius <3 ...\n`);
+            } else if (command === "!notes") {
+                window.open('https://inkoradev.github.io/termux/notes.html');
+                typeText(outputDiv, `Woah New word alr! YOu are a genius <3 ...\n`);
             } else if (command === "!neofetch") {
                 const neofetchOutput = `
                 <div class="neofetch-container">
@@ -352,6 +355,7 @@
                 - !clear_terminal: Clear the terminal output.
                 - !date: Show current date and time.
                 - !dictionary: Opens the dictionary for a quick learn 
+                - !notes: Termux's own note taking CUI based application
                 - !quote: Display a random quote.
                 - !calc <expression>: Perform a calculation.
                 - !rickroll: Rickroll yourself.
