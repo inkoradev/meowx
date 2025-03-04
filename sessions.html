@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Termux Terminal Session & Task Manager</title>
+  <title>Termux Terminal Session & Task Manager (24-Hour Format)</title>
   <link rel="icon" href="https://i.ibb.co/DS0gDns/T-1-removebg-preview.png" type="image/x-icon" />
   <style>
     /* ---------- Terminal Styles ---------- */
@@ -195,7 +195,7 @@
     </div>
     <div class="input">
       <span class="prompt">[user@Termux ~]$</span>
-      <input type="text" id="command" placeholder="Enter command" autofocus>
+      <input type="text" id="command" placeholder="Enter command (time in 24-hour format, e.g., 14:30)" autofocus>
     </div>
     <div id="table"></div>
     <!-- Running session indicator appears below the table -->
@@ -219,7 +219,7 @@
 
   <script>
     /* ---------- Utility Functions ---------- */
-    // Convert "HH:MM" to minutes since midnight.
+    // Convert "HH:MM" (24-hour format) to minutes since midnight.
     function timeStringToMinutes(t) {
       const parts = t.split(":");
       return parseInt(parts[0]) * 60 + parseInt(parts[1]);
@@ -228,7 +228,7 @@
     function formatTimeRemaining(seconds) {
       const hrs = Math.floor(seconds / 3600);
       const mins = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
+      const secs = Math.floor(seconds % 60);
       return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 
@@ -263,9 +263,9 @@
           const sessions = loadSessions();
           const session = sessions.find(s => s.id === task.sessionId);
           if (session) {
-            // Handle overnight session:
             let start = new Date(`${session.date}T${session.startTime}:00`);
             let end = new Date(`${session.date}T${session.endTime}:00`);
+            // If end time is less than or equal to start time, assume it's the next day.
             if (timeStringToMinutes(session.endTime) <= timeStringToMinutes(session.startTime)) {
               end.setDate(end.getDate() + 1);
             }
@@ -284,7 +284,7 @@
             }
           }
         }
-        let dueDate = task.dueDate; // For sessions, this is the current date.
+        let dueDate = task.dueDate;
         let duration = task.duration ? task.duration : "";
         tableHTML += `<tr>
           <td>${index + 1}</td>
@@ -345,6 +345,7 @@
         commandHistory.push(command);
         historyIndex = -1;
       }
+      // Append new output (persistent) unless !clear is used.
       if (command === "!clear") {
         outputDiv.innerHTML = '';
         return;
@@ -358,7 +359,7 @@
         // Format: !add_session <subject> <start_time> <end_time> [details]
         const parts = command.split(" ");
         if (parts.length < 4) {
-          typeText(outputDiv, "Usage: !add_session <subject> <start_time> <end_time> [details]\n");
+          typeText(outputDiv, "Usage: !add_session <subject> <start_time> <end_time> [details] (24-hour format)\n");
         } else {
           const subject = parts[1];
           const startTime = parts[2];
@@ -422,7 +423,7 @@
         // Format: !edit_session <index> <subject> <start_time> <end_time> [details]
         const parts = command.split(" ");
         if (parts.length < 5) {
-          typeText(outputDiv, "Usage: !edit_session <index> <subject> <start_time> <end_time> [details]\n");
+          typeText(outputDiv, "Usage: !edit_session <index> <subject> <start_time> <end_time> [details] (24-hour format)\n");
         } else {
           const index = parseInt(parts[1]) - 1;
           const subject = parts[2];
@@ -456,11 +457,11 @@
             typeText(outputDiv, "Session and corresponding task updated.\n");
           }
         }
-      } else if (command.startsWith("!delete_session")) {
-        // Delete session and corresponding task.
+      } else if (command.startsWith("!delete_session") || command.startsWith("!clear_task")) {
+        // !clear_task is an alias for !delete_session.
         const parts = command.split(" ");
         if (parts.length < 2) {
-          typeText(outputDiv, "Usage: !delete_session <index>\n");
+          typeText(outputDiv, "Usage: !delete_session <index> or !clear_task <index>\n");
         } else {
           const index = parseInt(parts[1]) - 1;
           let sessions = loadSessions();
@@ -473,29 +474,6 @@
             todoList = todoList.filter(task => task.sessionId !== deletedSession.id);
             saveTodoList();
             typeText(outputDiv, "Session and corresponding task deleted.\n");
-          }
-        }
-      } else if (command.startsWith("!clear_task")) {
-        // Delete a specific task (manual or session task).
-        const parts = command.split(" ");
-        if (parts.length < 2) {
-          typeText(outputDiv, "Usage: !clear_task <index>\n");
-        } else {
-          const index = parseInt(parts[1]) - 1;
-          if (index < 0 || index >= todoList.length) {
-            typeText(outputDiv, "Invalid task index.\n");
-          } else {
-            const taskToDelete = todoList[index];
-            // If the task is linked to a session, remove that session.
-            if (taskToDelete.sessionId) {
-              let sessions = loadSessions();
-              sessions = sessions.filter(s => s.id !== taskToDelete.sessionId);
-              saveSessions(sessions);
-            }
-            // Remove the task.
-            todoList.splice(index, 1);
-            saveTodoList();
-            typeText(outputDiv, "Task cleared.\n");
           }
         }
       } else if (command.startsWith("!complete_session")) {
@@ -634,7 +612,7 @@ Available Commands:
 -- Session Commands:
 !list_sessions          : List all sessions & tasks.
 !add_session <subject> <start_time> <end_time> [details]
-                        : Add a new session (Due Date is current date; Duration auto-calculated).
+                        : Add a new session (Time format: HH:MM in 24-hour; Due Date is current date; Duration auto-calculated).
 !edit_session <index> <subject> <start_time> <end_time> [details]
                         : Edit session at given index.
 !delete_session <index> : Delete session at given index.
@@ -642,8 +620,8 @@ Available Commands:
                         : Mark session at given index as complete (task will be marked done).
 !snooze_session <index> : Snooze session at given index for 5 minutes.
 !sessions               : Toggle the session creation window.
-!clear_task <index>     : Clear a specific task.
-                        
+!clear_task <index>     : Clear a specific task (and remove its session if linked).
+
 -- Task Commands:
 !add_task <task>        : Add a new task (Duration blank; Due Date is current date).
 !mark_done <task_number>: Mark a task as completed.
