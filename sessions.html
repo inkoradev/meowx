@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termux Terminal Session & Task Manager</title>
+  <link rel="icon" href="https://i.ibb.co/DS0gDns/T-1-removebg-preview.png" type="image/x-icon" />
+  <style>
+    /* ---------- Terminal Styles ---------- */
+    body {
+      font-family: monospace;
+      background-color: #25272b;
+      color: #D8DEE9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .terminal {
+      width: 80%;
+      background-color: #25272b;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    .output {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+    .input {
+      display: flex;
+      align-items: center;
+    }
+    .input .prompt {
+      color: #81A1C1;
+      margin-right: 10px;
+    }
+    .input input {
+      flex: 1;
+      background-color: transparent;
+      color: #D8DEE9;
+      border: none;
+      outline: none;
+      padding: 5px;
+      font-family: monospace;
+    }
+    .input input:focus {
+      outline: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #4C566A;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #4C566A;
+    }
+    tr:nth-child(even) {
+      background-color: #44474d;
+    }
+    .command-output {
+      color: #A3BE8C;
+    }
+    .error-output {
+      color: #BF616A;
+    }
+    /* Blinking cursor effect */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .input .prompt::after {
+      content: "▌";
+      animation: blink 1s infinite;
+      color: #81A1C1;
+    }
+    /* Running Session Indicator (below the table) */
+    #runningSessionIndicator {
+      margin-top: 10px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      font-size: 14px;
+      padding: 8px;
+      background-color: #2c2c2c;
+      border-radius: 4px;
+    }
+    /* ----- Task Table Styles ----- */
+    /* Columns: Sl. No., Session, Due Date, Duration, Progress, Status */
+    /* ----- Session Creation Modal Styles ----- */
+    .session-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.75);
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .session-modal.show {
+      display: flex;
+      opacity: 1;
+    }
+    .session-modal-content {
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .session-modal-content h2 {
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+    .session-modal-content form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .session-modal-content input,
+    .session-modal-content textarea {
+      padding: 8px;
+      font-size: 16px;
+      background: #2c2c2c;
+      color: #D8DEE9;
+      border: none;
+      border-radius: 4px;
+    }
+    .session-modal-content button {
+      background: #007aff;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s ease;
+    }
+    .session-modal-content button:hover {
+      background: #005bb5;
+    }
+    .session-modal-close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 20px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #D8DEE9;
+    }
+    /* ---------- Terminal Mode Styles ---------- */
+    body.terminal-mode {
+      background-color: #000;
+      color: #00ff00;
+      font-family: "Courier New", monospace;
+    }
+    body.terminal-mode .terminal {
+      background-color: #000;
+    }
+    body.terminal-mode table, 
+    body.terminal-mode th, 
+    body.terminal-mode td {
+      border: 1px solid #00ff00;
+    }
+    body.terminal-mode .output, 
+    body.terminal-mode .input, 
+    body.terminal-mode .prompt,
+    body.terminal-mode .command-output {
+      color: #00ff00;
+    }
+    body.terminal-mode .session-modal-content {
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal">
+    <div class="output" id="output">
+      <span class="command-output">Welcome to Termux Terminal Session Manager</span>
+    </div>
+    <div class="input">
+      <span class="prompt">[user@Termux ~]$</span>
+      <input type="text" id="command" placeholder="Enter command" autofocus>
+    </div>
+    <div id="table"></div>
+    <!-- Running session indicator appears below the table -->
+    <div id="runningSessionIndicator"></div>
+  </div>
+
+  <!-- Session Creation Modal (Toggled with !sessions) -->
+  <div class="session-modal" id="sessionModal">
+    <div class="session-modal-content">
+      <button class="session-modal-close" id="closeSessionModal">&times;</button>
+      <h2>Create New Session</h2>
+      <form id="sessionCreationForm">
+        <input type="text" id="sessionSubject" placeholder="Subject Name" required>
+        <input type="time" id="sessionStartTime" required>
+        <input type="time" id="sessionEndTime" required>
+        <textarea id="sessionDetails" placeholder="Session Details"></textarea>
+        <button type="submit">Create Session</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Utility Functions ---------- */
+    // Convert "HH:MM" to minutes since midnight.
+    function timeStringToMinutes(t) {
+      const parts = t.split(":");
+      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+    // Format seconds into HH:MM:SS.
+    function formatTimeRemaining(seconds) {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    /* ---------- Session Storage ---------- */
+    const sessionStorageKey = "studyPlannerSessions";
+    function loadSessions() {
+      const sessions = localStorage.getItem(sessionStorageKey);
+      return sessions ? JSON.parse(sessions) : [];
+    }
+    function saveSessions(sessions) {
+      localStorage.setItem(sessionStorageKey, JSON.stringify(sessions));
+    }
+
+    /* ---------- Task (Todo List) Storage ---------- */
+    let todoList = JSON.parse(localStorage.getItem('todoList')) || [];
+    function saveTodoList() {
+      localStorage.setItem('todoList', JSON.stringify(todoList));
+    }
+    // Render the task table.
+    // Columns: Sl. No., Session, Due Date, Duration, Progress, Status.
+    function renderTable() {
+      const tableDiv = document.getElementById('table');
+      if (todoList.length === 0) {
+        tableDiv.innerHTML = "<p class='command-output'>No tasks available. Use !help</p>";
+        return;
+      }
+      let tableHTML = "<table><thead><tr><th>Sl. No.</th><th>Session</th><th>Due Date</th><th>Duration</th><th>Progress</th><th>Status</th></tr></thead><tbody>";
+      todoList.forEach((task, index) => {
+        let progressHTML = "";
+        // Only session tasks (with a nonempty duration) show progress.
+        if (task.duration) {
+          const sessions = loadSessions();
+          const session = sessions.find(s => s.id === task.sessionId);
+          if (session) {
+            // Handle overnight session:
+            let start = new Date(`${session.date}T${session.startTime}:00`);
+            let end = new Date(`${session.date}T${session.endTime}:00`);
+            if (timeStringToMinutes(session.endTime) <= timeStringToMinutes(session.startTime)) {
+              end.setDate(end.getDate() + 1);
+            }
+            const now = new Date();
+            if (now >= start && now < end) {
+              const totalDuration = (end - start) / 60000;
+              const elapsed = (now - start) / 60000;
+              const percent = Math.min((elapsed / totalDuration) * 100, 100);
+              if (document.body.classList.contains("terminal-mode")) {
+                const totalChars = 20;
+                const numHashes = Math.floor((percent / 100) * totalChars);
+                progressHTML = "#".repeat(numHashes) + " ".repeat(totalChars - numHashes);
+              } else {
+                progressHTML = `<div style="background:#ff9500; height:4px; width:${percent}%;"></div>`;
+              }
+            }
+          }
+        }
+        let dueDate = task.dueDate; // For sessions, this is the current date.
+        let duration = task.duration ? task.duration : "";
+        tableHTML += `<tr>
+          <td>${index + 1}</td>
+          <td>${task.task}</td>
+          <td>${dueDate}</td>
+          <td>${duration}</td>
+          <td>${progressHTML}</td>
+          <td>${task.status}</td>
+          </tr>`;
+      });
+      tableHTML += "</tbody></table>";
+      tableDiv.innerHTML = tableHTML;
+    }
+
+    /* ---------- Terminal Command Functions ---------- */
+    let commandHistory = [];
+    let historyIndex = -1;
+    const quotes = [
+      "The best way to predict the future is to create it. – Peter Drucker",
+      "Do what you can, with what you have, where you are. – Theodore Roosevelt",
+      "Success is not final, failure is not fatal: It is the courage to continue that counts. – Winston Churchill"
+    ];
+    function typeText(element, text, delay = 5) {
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < text.length) {
+          element.innerHTML += text.charAt(index);
+          index++;
+        } else {
+          clearInterval(interval);
+        }
+      }, delay);
+    }
+    document.getElementById('command').addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowUp') {
+        if (historyIndex < commandHistory.length - 1) {
+          historyIndex++;
+          this.value = commandHistory[commandHistory.length - 1 - historyIndex];
+        }
+        event.preventDefault();
+      } else if (event.key === 'ArrowDown') {
+        if (historyIndex > 0) {
+          historyIndex--;
+          this.value = commandHistory[commandHistory.length - 1 - historyIndex];
+        } else {
+          historyIndex = -1;
+          this.value = '';
+        }
+        event.preventDefault();
+      }
+    });
+    function executeCommand() {
+      const commandInput = document.getElementById('command');
+      const outputDiv = document.getElementById('output');
+      const command = commandInput.value.trim();
+      commandInput.value = '';
+      if (command) {
+        commandHistory.push(command);
+        historyIndex = -1;
+      }
+      if (command === "!clear") {
+        outputDiv.innerHTML = '';
+        return;
+      }
+      if (command === "!sessions") {
+        toggleSessionCreationModal();
+        typeText(outputDiv, "Toggling session creation window...\n");
+      }
+      // Session Commands:
+      else if (command.startsWith("!add_session")) {
+        // Format: !add_session <subject> <start_time> <end_time> [details]
+        const parts = command.split(" ");
+        if (parts.length < 4) {
+          typeText(outputDiv, "Usage: !add_session <subject> <start_time> <end_time> [details]\n");
+        } else {
+          const subject = parts[1];
+          const startTime = parts[2];
+          const endTime = parts[3];
+          const details = parts.slice(4).join(" ");
+          const today = new Date().toISOString().split("T")[0];
+          const newSession = { 
+            id: Date.now().toString(), 
+            subject, 
+            startTime, 
+            endTime, 
+            details, 
+            date: today, 
+            completed: false, 
+            notified: false, 
+            snoozedUntil: null 
+          };
+          let sessions = loadSessions();
+          sessions.push(newSession);
+          saveSessions(sessions);
+          let durationStr = `${newSession.startTime} - ${newSession.endTime}`;
+          if (timeStringToMinutes(newSession.endTime) <= timeStringToMinutes(newSession.startTime)) {
+            durationStr += " (next day)";
+          }
+          const newTask = {
+            id: newSession.id,
+            sessionId: newSession.id,
+            task: newSession.subject,
+            dueDate: today,
+            duration: durationStr,
+            status: "Pending"
+          };
+          todoList.push(newTask);
+          saveTodoList();
+          typeText(outputDiv, "Session added and task created.\n");
+        }
+      } else if (command.startsWith("!list_sessions")) {
+        const sessions = loadSessions();
+        let output = "Sessions & Tasks:\n";
+        if (sessions.length === 0) {
+          output += "No sessions found.\n";
+        } else {
+          sessions.forEach((s, i) => {
+            let dur = `${s.startTime} - ${s.endTime}`;
+            if (timeStringToMinutes(s.endTime) <= timeStringToMinutes(s.startTime)) {
+              dur += " (next day)";
+            }
+            output += `${i+1}: ${s.subject} (${dur}) ${s.details || ""}\n`;
+          });
+        }
+        output += "\nTask Table:\n";
+        if (todoList.length === 0) {
+          output += "No tasks available.\n";
+        } else {
+          todoList.forEach((t, i) => {
+            output += `${i+1}: ${t.task} | Due: ${t.dueDate} | Duration: ${t.duration || ""} | Status: ${t.status}\n`;
+          });
+        }
+        typeText(outputDiv, output);
+      } else if (command.startsWith("!edit_session")) {
+        // Format: !edit_session <index> <subject> <start_time> <end_time> [details]
+        const parts = command.split(" ");
+        if (parts.length < 5) {
+          typeText(outputDiv, "Usage: !edit_session <index> <subject> <start_time> <end_time> [details]\n");
+        } else {
+          const index = parseInt(parts[1]) - 1;
+          const subject = parts[2];
+          const startTime = parts[3];
+          const endTime = parts[4];
+          const details = parts.slice(5).join(" ");
+          let sessions = loadSessions();
+          if (index < 0 || index >= sessions.length) {
+            typeText(outputDiv, "Invalid session index.\n");
+          } else {
+            sessions[index].subject = subject;
+            sessions[index].startTime = startTime;
+            sessions[index].endTime = endTime;
+            sessions[index].details = details;
+            saveSessions(sessions);
+            let durationStr = `${startTime} - ${endTime}`;
+            if (timeStringToMinutes(endTime) <= timeStringToMinutes(startTime)) {
+              durationStr += " (next day)";
+            }
+            todoList = todoList.map(task => {
+              if (task.sessionId === sessions[index].id) {
+                return {
+                  ...task,
+                  task: subject,
+                  duration: durationStr
+                };
+              }
+              return task;
+            });
+            saveTodoList();
+            typeText(outputDiv, "Session and corresponding task updated.\n");
+          }
+        }
+      } else if (command.startsWith("!delete_session")) {
+        // Delete session and corresponding task.
+        const parts = command.split(" ");
+        if (parts.length < 2) {
+          typeText(outputDiv, "Usage: !delete_session <index>\n");
+        } else {
+          const index = parseInt(parts[1]) - 1;
+          let sessions = loadSessions();
+          if (index < 0 || index >= sessions.length) {
+            typeText(outputDiv, "Invalid session index.\n");
+          } else {
+            const deletedSession = sessions[index];
+            sessions.splice(index, 1);
+            saveSessions(sessions);
+            todoList = todoList.filter(task => task.sessionId !== deletedSession.id);
+            saveTodoList();
+            typeText(outputDiv, "Session and corresponding task deleted.\n");
+          }
+        }
+      } else if (command.startsWith("!clear_task")) {
+        // Delete a specific task (manual or session task).
+        const parts = command.split(" ");
+        if (parts.length < 2) {
+          typeText(outputDiv, "Usage: !clear_task <index>\n");
+        } else {
+          const index = parseInt(parts[1]) - 1;
+          if (index < 0 || index >= todoList.length) {
+            typeText(outputDiv, "Invalid task index.\n");
+          } else {
+            const taskToDelete = todoList[index];
+            // If the task is linked to a session, remove that session.
+            if (taskToDelete.sessionId) {
+              let sessions = loadSessions();
+              sessions = sessions.filter(s => s.id !== taskToDelete.sessionId);
+              saveSessions(sessions);
+            }
+            // Remove the task.
+            todoList.splice(index, 1);
+            saveTodoList();
+            typeText(outputDiv, "Task cleared.\n");
+          }
+        }
+      } else if (command.startsWith("!complete_session")) {
+        // Format: !complete_session <index>
+        const parts = command.split(" ");
+        if (parts.length < 2) {
+          typeText(outputDiv, "Usage: !complete_session <index>\n");
+        } else {
+          const index = parseInt(parts[1]) - 1;
+          let sessions = loadSessions();
+          if (index < 0 || index >= sessions.length) {
+            typeText(outputDiv, "Invalid session index.\n");
+          } else {
+            sessions[index].completed = true;
+            saveSessions(sessions);
+            todoList = todoList.map(task => {
+              if (task.sessionId === sessions[index].id) {
+                return { ...task, status: "Completed" };
+              }
+              return task;
+            });
+            saveTodoList();
+            typeText(outputDiv, "Session and corresponding task marked complete.\n");
+          }
+        }
+      } else if (command.startsWith("!snooze_session")) {
+        // Format: !snooze_session <index>
+        const parts = command.split(" ");
+        if (parts.length < 2) {
+          typeText(outputDiv, "Usage: !snooze_session <index>\n");
+        } else {
+          const index = parseInt(parts[1]) - 1;
+          let sessions = loadSessions();
+          if (index < 0 || index >= sessions.length) {
+            typeText(outputDiv, "Invalid session index.\n");
+          } else {
+            const now = new Date();
+            sessions[index].snoozedUntil = new Date(now.getTime() + 5 * 60000).toISOString();
+            saveSessions(sessions);
+            typeText(outputDiv, "Session snoozed for 5 minutes.\n");
+          }
+        }
+      }
+      // Task and Miscellaneous Commands:
+      else if (command.startsWith("!add_task")) {
+        const taskName = command.split(/ (.+)/)[1];
+        if (taskName) {
+          const today = new Date().toISOString().split('T')[0];
+          todoList.push({ id: Date.now().toString(), task: taskName, dueDate: today, status: 'Pending' });
+          saveTodoList();
+          typeText(outputDiv, `Task added: ${taskName} (Due: ${today})\n`);
+        } else {
+          typeText(outputDiv, `Invalid command format. Use: !add_task <task>\n`);
+        }
+      } else if (command.startsWith("!mark_done")) {
+        const taskNumber = parseInt(command.split(/ (.+)/)[1]);
+        if (taskNumber && taskNumber <= todoList.length) {
+          todoList[taskNumber - 1].status = 'Completed';
+          saveTodoList();
+          typeText(outputDiv, `Task ${taskNumber} marked as completed.\n`);
+        } else {
+          typeText(outputDiv, `Invalid task number. Use: !mark_done <task_number>\n`);
+        }
+      } else if (command === "!sort_tasks") {
+        todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        saveTodoList();
+        typeText(outputDiv, `Tasks sorted by due date.\n`);
+      } else if (command.startsWith("!edit_task")) {
+        const parts = command.split(/ (.+)/)[1].split(' ');
+        const taskNumber = parseInt(parts[0]);
+        const newTask = parts.slice(1).join(' ');
+        if (taskNumber && taskNumber <= todoList.length && newTask) {
+          todoList[taskNumber - 1].task = newTask;
+          saveTodoList();
+          typeText(outputDiv, `Task ${taskNumber} updated to: ${newTask}\n`);
+        } else {
+          typeText(outputDiv, `Invalid command format. Use: !edit_task <task_number> <new_task>\n`);
+        }
+      } else if (command.startsWith("!change_date")) {
+        const parts = command.split(/ (.+)/)[1].split(' ');
+        const taskNumber = parseInt(parts[0]);
+        const newDueDate = parts[1];
+        if (taskNumber && taskNumber <= todoList.length && newDueDate) {
+          todoList[taskNumber - 1].dueDate = newDueDate;
+          saveTodoList();
+          typeText(outputDiv, `Due date for task ${taskNumber} changed to: ${newDueDate}\n`);
+        } else {
+          typeText(outputDiv, `Invalid command format. Use: !change_date <task_number> <new_due_date>\n`);
+        }
+      } else if (command === "!show_tasks") {
+        if (todoList.length === 0) {
+          typeText(outputDiv, `No tasks available.\n`);
+        } else {
+          typeText(outputDiv, `Current tasks:\n`);
+          renderTable();
+        }
+      } else if (command === "!date") {
+        const date = new Date().toLocaleString();
+        typeText(outputDiv, `Current date and time: ${date}\n`);
+      } else if (command === "!quote") {
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        typeText(outputDiv, `${randomQuote}\n`);
+      } else if (command.startsWith("!calc")) {
+        const expression = command.split(/ (.+)/)[1];
+        try {
+          const result = eval(expression);
+          typeText(outputDiv, `Result: ${result}\n`);
+        } catch (e) {
+          typeText(outputDiv, `Invalid expression. Use: !calc <expression>\n`);
+        }
+      } else if (command === "!rickroll") {
+        window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+        typeText(outputDiv, `Never gonna give you up...\n`);
+      } else if (command === "!neofetch") {
+        const neofetchOutput = `
+<div class="neofetch-container">
+  <img src="https://i.ibb.co/HTzFG28g/image-removebg-preview.png" alt="Neofetch Image" class="neofetch-image">
+  <div class="neofetch-info">
+      <pre>
+Termux Terminal (Simulated)
+Version: 1.5.0
+Description: willbeavailablesoon
+Created by: <a href="https://jeffvscblogs.github.io/home/about.html" target="_blank" style="color: #81A1C1;">@Jeffvsc</a>
+Know more:  <a href="https://jeffvscblogs.github.io/home/Projects.html" target="_blank" style="color: #81A1C1;">Projects</a>
+Resolution: 1920x1080
+WM Theme: Adwaita
+Memory: localhost
+      </pre>
+  </div>
+</div>
+`;
+        outputDiv.innerHTML += neofetchOutput;
+      } else if (command === "!help") {
+        const helpText = `
+Available Commands:
+-- Session Commands:
+!list_sessions          : List all sessions & tasks.
+!add_session <subject> <start_time> <end_time> [details]
+                        : Add a new session (Due Date is current date; Duration auto-calculated).
+!edit_session <index> <subject> <start_time> <end_time> [details]
+                        : Edit session at given index.
+!delete_session <index> : Delete session at given index.
+!complete_session <index>
+                        : Mark session at given index as complete (task will be marked done).
+!snooze_session <index> : Snooze session at given index for 5 minutes.
+!sessions               : Toggle the session creation window.
+!clear_task <index>     : Clear a specific task.
+                        
+-- Task Commands:
+!add_task <task>        : Add a new task (Duration blank; Due Date is current date).
+!mark_done <task_number>: Mark a task as completed.
+!sort_tasks             : Sort tasks by due date.
+!edit_task <task_number> <new_task>
+                        : Edit a task.
+!change_date <task_number> <new_due_date>
+                        : Change a task's due date.
+!show_tasks             : Display all tasks.
+
+-- Miscellaneous:
+!clear                  : Clear terminal output.
+!date                   : Show current date and time.
+!quote                  : Display a random quote.
+!calc <expression>      : Perform a calculation.
+!rickroll               : Rickroll yourself.
+!neofetch               : Display system information.
+!help                   : Display this help message.
+`;
+        typeText(outputDiv, helpText);
+      } else {
+        typeText(outputDiv, `Invalid command. Try again. Use !help\n`);
+      }
+      renderTable();
+    }
+    renderTable();
+    document.getElementById('command').addEventListener('keypress', function (event) {
+      if (event.key === 'Enter') {
+        executeCommand();
+        this.focus();
+      }
+    });
+
+    /* ---------- Session Creation & Running Session Indicator ---------- */
+    function toggleSessionCreationModal() {
+      const modal = document.getElementById('sessionModal');
+      modal.classList.toggle('show');
+    }
+    // Session creation form submission via modal:
+    document.getElementById('sessionCreationForm')?.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const subject = document.getElementById('sessionSubject').value.trim();
+      const startTime = document.getElementById('sessionStartTime').value;
+      const endTime = document.getElementById('sessionEndTime').value;
+      const details = document.getElementById('sessionDetails').value.trim();
+      if (!subject || !startTime || !endTime) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+      const today = new Date().toISOString().split("T")[0];
+      const newSession = {
+        id: Date.now().toString(),
+        subject: subject,
+        startTime: startTime,
+        endTime: endTime,
+        details: details,
+        date: today,
+        completed: false,
+        notified: false,
+        snoozedUntil: null
+      };
+      let sessions = loadSessions();
+      sessions.push(newSession);
+      saveSessions(sessions);
+      let durationStr = `${newSession.startTime} - ${newSession.endTime}`;
+      if (timeStringToMinutes(newSession.endTime) <= timeStringToMinutes(newSession.startTime)) {
+        durationStr += " (next day)";
+      }
+      const newTask = {
+        id: newSession.id,
+        sessionId: newSession.id,
+        task: newSession.subject,
+        dueDate: today,
+        duration: durationStr,
+        status: "Pending"
+      };
+      todoList.push(newTask);
+      saveTodoList();
+      toggleSessionCreationModal();
+    });
+    document.getElementById('closeSessionModal').addEventListener('click', toggleSessionCreationModal);
+
+    /* ---------- Running Session Indicator ---------- */
+    function updateRunningSessionIndicator() {
+      const indicator = document.getElementById("runningSessionIndicator");
+      const sessions = loadSessions();
+      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const runningSessions = sessions.filter(session => {
+        if (session.date !== today || session.completed) return false;
+        let start = new Date(`${session.date}T${session.startTime}:00`);
+        let end = new Date(`${session.date}T${session.endTime}:00`);
+        if (timeStringToMinutes(session.endTime) <= timeStringToMinutes(session.startTime)) {
+          end.setDate(end.getDate() + 1);
+        }
+        return now >= start && now < end;
+      });
+      if (runningSessions.length > 0) {
+        const session = runningSessions[0];
+        let start = new Date(`${session.date}T${session.startTime}:00`);
+        let end = new Date(`${session.date}T${session.endTime}:00`);
+        if (timeStringToMinutes(session.endTime) <= timeStringToMinutes(session.startTime)) {
+          end.setDate(end.getDate() + 1);
+        }
+        const totalDuration = (end - start) / 60000;
+        const elapsed = (now - start) / 60000;
+        const percent = Math.min((elapsed / totalDuration) * 100, 100);
+        let indicatorHTML = "";
+        if (document.body.classList.contains("terminal-mode")) {
+          const totalChars = 20;
+          const numHashes = Math.floor((percent / 100) * totalChars);
+          const bar = "#".repeat(numHashes) + " ".repeat(totalChars - numHashes);
+          indicatorHTML = `Running: ${session.subject}\n[${bar}]`;
+        } else {
+          indicatorHTML = `<div style="font-size:16px; margin-bottom:5px;">Running: ${session.subject}</div>
+            <div style="background:#ff9500; height:4px; width:${percent}%;"></div>`;
+        }
+        indicator.innerHTML = indicatorHTML;
+      } else {
+        indicator.innerHTML = "";
+      }
+    }
+    function updateAllTimers() {
+      updateRunningSessionIndicator();
+    }
+    setInterval(updateAllTimers, 1000);
+    setInterval(checkNotifications, 60000);
+
+    /* ---------- Notification Checker ---------- */
+    function checkNotifications() {
+      let sessions = loadSessions();
+      const now = new Date();
+      sessions.forEach(session => {
+        let start = new Date(`${session.date}T${session.startTime}:00`);
+        let end = new Date(`${session.date}T${session.endTime}:00`);
+        if (timeStringToMinutes(session.endTime) <= timeStringToMinutes(session.startTime)) {
+          end.setDate(end.getDate() + 1);
+        }
+        if (session.snoozedUntil) {
+          const snoozeTime = new Date(session.snoozedUntil);
+          if (now < snoozeTime) return;
+          else session.snoozedUntil = null;
+        }
+        const diffMinutes = (start - now) / 60000;
+        if (diffMinutes > 0 && diffMinutes <= 5 && !session.notified && !session.completed) {
+          if (Notification.permission === "granted") {
+            new Notification("Upcoming Session", {
+              body: `${session.subject} starts at ${session.startTime}.`,
+              icon: "https://via.placeholder.com/128"
+            });
+          }
+          session.notified = true;
+          saveSessions(sessions);
+        }
+      });
+    }
+  </script>
+  <datalist id="suggestions"></datalist>
+</body>
+</html>
