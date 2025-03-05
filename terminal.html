@@ -93,8 +93,6 @@
       background-color: #2c2c2c;
       border-radius: 4px;
     }
-    /* ----- Task Table Styles ----- */
-    /* Columns: Sl. No., Session, Due Date, Duration, Progress, Status */
     /* ----- Session Creation Modal Styles ----- */
     .session-modal {
       display: none;
@@ -191,31 +189,33 @@
 <body>
   <div class="terminal">
     <div class="output" id="output">
-      <span class="command-output">Welcome to meowX Terminal Session Manager</span>
-    </div>
+        <span class="command-output">Welcome to meowX</span>
+      </div>
+    <div id="output" class="output"></div>
     <div class="input">
-      <span class="prompt">[user@meowX ~]$</span>
-      <input type="text" id="command" placeholder="Enter command (time in 24-hour format, e.g., 14:30)" autofocus>
+      <span class="prompt">user@meowx:</span>
+      <input id="command" type="text" autofocus />
     </div>
     <div id="table"></div>
-    <!-- Running session indicator appears below the table -->
     <div id="runningSessionIndicator"></div>
   </div>
 
-  <!-- Session Creation Modal (Toggled with !sessions) -->
-  <div class="session-modal" id="sessionModal">
+  <!-- Session Creation Modal -->
+  <div id="sessionModal" class="session-modal">
     <div class="session-modal-content">
-      <button class="session-modal-close" id="closeSessionModal">&times;</button>
-      <h2>Create New Session</h2>
+      <button id="closeSessionModal" class="session-modal-close">&times;</button>
+      <h2>Create Session</h2>
       <form id="sessionCreationForm">
-        <input type="text" id="sessionSubject" placeholder="Subject Name" required>
-        <input type="time" id="sessionStartTime" required>
-        <input type="time" id="sessionEndTime" required>
-        <textarea id="sessionDetails" placeholder="Session Details"></textarea>
-        <button type="submit">Create Session</button>
+        <input id="sessionSubject" type="text" placeholder="Subject" required />
+        <input id="sessionStartTime" type="time" placeholder="Start Time" required />
+        <input id="sessionEndTime" type="time" placeholder="End Time" required />
+        <textarea id="sessionDetails" placeholder="Details (optional)"></textarea>
+        <button type="submit">Add Session</button>
       </form>
     </div>
   </div>
+
+  <datalist id="suggestions"></datalist>
 
   <script>
     /* ---------- Utility Functions ---------- */
@@ -231,7 +231,7 @@
       const secs = Math.floor(seconds % 60);
       return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
-
+  
     /* ---------- Session Storage ---------- */
     const sessionStorageKey = "studyPlannerSessions";
     function loadSessions() {
@@ -241,12 +241,13 @@
     function saveSessions(sessions) {
       localStorage.setItem(sessionStorageKey, JSON.stringify(sessions));
     }
-
+  
     /* ---------- Task (Todo List) Storage ---------- */
     let todoList = JSON.parse(localStorage.getItem('todoList')) || [];
     function saveTodoList() {
       localStorage.setItem('todoList', JSON.stringify(todoList));
     }
+    
     // Render the task table.
     // Columns: Sl. No., Session, Due Date, Duration, Progress, Status.
     function renderTable() {
@@ -298,7 +299,54 @@
       tableHTML += "</tbody></table>";
       tableDiv.innerHTML = tableHTML;
     }
-
+  
+    /* ---------- Classes Storage & Functions ---------- */
+    const classesStorageKey = "studyPlannerClasses";
+    function loadClasses() {
+      const classes = localStorage.getItem(classesStorageKey);
+      return classes ? JSON.parse(classes) : [];
+    }
+    function saveClasses(classes) {
+      localStorage.setItem(classesStorageKey, JSON.stringify(classes));
+    }
+  
+    // Check for upcoming classes (notifications for classes scheduled weekly)
+    function checkClassNotifications() {
+      let classes = loadClasses();
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 (Sunday) to 6 (Saturday)
+      // Mapping weekday names to numbers
+      const dayMapping = {
+        "Sunday": 0,
+        "Monday": 1,
+        "Tuesday": 2,
+        "Wednesday": 3,
+        "Thursday": 4,
+        "Friday": 5,
+        "Saturday": 6
+      };
+      classes.forEach(cls => {
+        if (dayMapping[cls.day] === currentDay) {
+          const startMinutes = timeStringToMinutes(cls.startTime);
+          const nowMinutes = now.getHours() * 60 + now.getMinutes();
+          const diff = startMinutes - nowMinutes;
+          // If class starts in the next 5 minutes
+          if (diff > 0 && diff <= 5) {
+            let todayString = now.toISOString().split("T")[0];
+            // Notify only once per day for each class
+            if (cls.notifiedDate !== todayString && Notification.permission === "granted") {
+              new Notification("Upcoming Class", {
+                body: `${cls.subject} starts at ${cls.startTime} on ${cls.day}.`,
+                icon: "https://via.placeholder.com/128"
+              });
+              cls.notifiedDate = todayString;
+              saveClasses(classes);
+            }
+          }
+        }
+      });
+    }
+  
     /* ---------- Terminal Command Functions ---------- */
     let commandHistory = [];
     let historyIndex = -1;
@@ -396,7 +444,8 @@
           saveTodoList();
           typeText(outputDiv, "Session added and task created.\n");
         }
-      } else if (command.startsWith("!list_sessions")) {
+      }
+      else if (command.startsWith("!list_sessions")) {
         const sessions = loadSessions();
         let output = "Sessions & Tasks:\n";
         if (sessions.length === 0) {
@@ -419,7 +468,8 @@
           });
         }
         typeText(outputDiv, output);
-      } else if (command.startsWith("!edit_session")) {
+      }
+      else if (command.startsWith("!edit_session")) {
         // Format: !edit_session <index> <subject> <start_time> <end_time> [details]
         const parts = command.split(" ");
         if (parts.length < 5) {
@@ -457,7 +507,8 @@
             typeText(outputDiv, "Session and corresponding task updated.\n");
           }
         }
-      } else if (command.startsWith("!delete_session") || command.startsWith("!clear_task")) {
+      }
+      else if (command.startsWith("!delete_session") || command.startsWith("!clear_task")) {
         // !clear_task is an alias for !delete_session.
         const parts = command.split(" ");
         if (parts.length < 2) {
@@ -476,7 +527,8 @@
             typeText(outputDiv, "Session and corresponding task deleted.\n");
           }
         }
-      } else if (command.startsWith("!complete_session")) {
+      }
+      else if (command.startsWith("!complete_session")) {
         // Format: !complete_session <index>
         const parts = command.split(" ");
         if (parts.length < 2) {
@@ -499,7 +551,8 @@
             typeText(outputDiv, "Session and corresponding task marked complete.\n");
           }
         }
-      } else if (command.startsWith("!snooze_session")) {
+      }
+      else if (command.startsWith("!snooze_session")) {
         // Format: !snooze_session <index>
         const parts = command.split(" ");
         if (parts.length < 2) {
@@ -528,7 +581,8 @@
         } else {
           typeText(outputDiv, `Invalid command format. Use: !add_task <task>\n`);
         }
-      } else if (command.startsWith("!mark_done")) {
+      }
+      else if (command.startsWith("!mark_done")) {
         const taskNumber = parseInt(command.split(/ (.+)/)[1]);
         if (taskNumber && taskNumber <= todoList.length) {
           todoList[taskNumber - 1].status = 'Completed';
@@ -537,11 +591,13 @@
         } else {
           typeText(outputDiv, `Invalid task number. Use: !mark_done <task_number>\n`);
         }
-      } else if (command === "!sort_tasks") {
+      }
+      else if (command === "!sort_tasks") {
         todoList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         saveTodoList();
         typeText(outputDiv, `Tasks sorted by due date.\n`);
-      } else if (command.startsWith("!edit_task")) {
+      }
+      else if (command.startsWith("!edit_task")) {
         const parts = command.split(/ (.+)/)[1].split(' ');
         const taskNumber = parseInt(parts[0]);
         const newTask = parts.slice(1).join(' ');
@@ -552,7 +608,8 @@
         } else {
           typeText(outputDiv, `Invalid command format. Use: !edit_task <task_number> <new_task>\n`);
         }
-      } else if (command.startsWith("!change_date")) {
+      }
+      else if (command.startsWith("!change_date")) {
         const parts = command.split(/ (.+)/)[1].split(' ');
         const taskNumber = parseInt(parts[0]);
         const newDueDate = parts[1];
@@ -563,20 +620,24 @@
         } else {
           typeText(outputDiv, `Invalid command format. Use: !change_date <task_number> <new_due_date>\n`);
         }
-      } else if (command === "!show_tasks") {
+      }
+      else if (command === "!show_tasks") {
         if (todoList.length === 0) {
           typeText(outputDiv, `No tasks available.\n`);
         } else {
           typeText(outputDiv, `Current tasks:\n`);
           renderTable();
         }
-      } else if (command === "!date") {
+      }
+      else if (command === "!date") {
         const date = new Date().toLocaleString();
         typeText(outputDiv, `Current date and time: ${date}\n`);
-      } else if (command === "!quote") {
+      }
+      else if (command === "!quote") {
         const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
         typeText(outputDiv, `${randomQuote}\n`);
-      } else if (command.startsWith("!calc")) {
+      }
+      else if (command.startsWith("!calc")) {
         const expression = command.split(/ (.+)/)[1];
         try {
           const result = eval(expression);
@@ -584,69 +645,167 @@
         } catch (e) {
           typeText(outputDiv, `Invalid expression. Use: !calc <expression>\n`);
         }
-        } else if (command === "!notes") {
-          window.open('https://inkoradev.github.io/meowx/notes.html');
-          typeText(outputDiv, `Woah Notes ? You are super productive today !\n`);        
-        
-      } else if (command === "!rickroll") {
+      }
+      else if (command === "!notes") {
+        window.open('https://inkoradev.github.io/meowx/notes.html');
+        typeText(outputDiv, `Woah Notes ? You are super productive today !\n`);        
+      }
+      else if (command === "!rickroll") {
         window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
         typeText(outputDiv, `Never gonna give you up...\n`);
-      } else if (command === "!neofetch") {
+      }
+      else if (command === "!neofetch") {
         const neofetchOutput = `
-<div class="neofetch-container">
-  <img src="https://i.ibb.co/HTzFG28g/image-removebg-preview.png" alt="Neofetch Image" class="neofetch-image">
-  <div class="neofetch-info">
-      <pre>
-meowX Terminal (Simulated)
-Version: 1.5.0
-Description: willbeavailablesoon
-developer: <a href="https://jeffvscblogs.github.io/home/about.html" target="_blank" style="color: #81A1C1;">@Jeffvsc</a>
-Know more:  <a href="https://jeffvscblogs.github.io/home/Projects.html" target="_blank" style="color: #81A1C1;">Projects</a>
-Resolution: 1920x1080
-WM Theme: Adwaita
-Memory: localhost
-      </pre>
+  <div class="neofetch-container">
+    <img src="https://i.ibb.co/HTzFG28g/image-removebg-preview.png" alt="Neofetch Image" class="neofetch-image">
+    <div class="neofetch-info">
+        <pre>
+  meowX Terminal (Simulated)
+  Version: 1.5.0
+  Description: willbeavailablesoon
+  developer: <a href="https://jeffvscblogs.github.io/home/about.html" target="_blank" style="color: #81A1C1;">@Jeffvsc</a>
+  Know more:  <a href="https://jeffvscblogs.github.io/home/Projects.html" target="_blank" style="color: #81A1C1;">Projects</a>
+  Resolution: 1920x1080
+  WM Theme: Adwaita
+  Memory: localhost
+        </pre>
+    </div>
   </div>
-</div>
-`;
+  `;
         outputDiv.innerHTML += neofetchOutput;
-      } else if (command === "!help") {
-        const helpText = `
-Available Commands:
--- Session Commands:
-!list_sessions          : List all sessions & tasks.
-!add_session <subject> <start_time> <end_time> [details]
-                        : Add a new session (Time format: HH:MM in 24-hour; Due Date is current date; Duration auto-calculated).
-!edit_session <index> <subject> <start_time> <end_time> [details]
-                        : Edit session at given index.
-!delete_session <index> : Delete session at given index.
-!complete_session <index>
-                        : Mark session at given index as complete (task will be marked done).
-!snooze_session <index> : Snooze session at given index for 5 minutes.
-!sessions               : Toggle the session creation window.
-!clear_task <index>     : Clear a specific task (and remove its session if linked).
-
--- Task Commands:
-!add_task <task>        : Add a new task (Duration blank; Due Date is current date).
-!mark_done <task_number>: Mark a task as completed.
-!sort_tasks             : Sort tasks by due date.
-!edit_task <task_number> <new_task>
-                        : Edit a task.
-!change_date <task_number> <new_due_date>
-                        : Change a task's due date.
-!show_tasks             : Display all tasks.
-
--- Miscellaneous:
-!clear                  : Clear terminal output.
-!date                   : Show current date and time.
-!quote                  : Display a random quote.
-!calc <expression>      : Perform a calculation.
-!rickroll               : Rickroll yourself.
-!neofetch               : Display system information.
-!help                   : Display this help message.
-`;
-        typeText(outputDiv, helpText);
-      } else {
+      }
+      // New Help Command with Categories:
+      else if (command.startsWith("!help")) {
+        const parts = command.split(" ");
+        if (parts.length === 1) {
+          // Full help message
+          const helpText = `
+  Available Commands:
+  -- Session Commands:
+  !list_sessions          : List all sessions & tasks.
+  !add_session <subject> <start_time> <end_time> [details]
+                          : Add a new session (Time format: HH:MM in 24-hour; Due Date is current date; Duration auto-calculated).
+  !edit_session <index> <subject> <start_time> <end_time> [details]
+                          : Edit session at given index.
+  !delete_session <index> : Delete session at given index.
+  !complete_session <index>: Mark session as complete.
+  !snooze_session <index> : Snooze session for 5 minutes.
+  !sessions               : Toggle the session creation window.
+  !clear_task <index>     : Clear a specific task (and remove its session if linked).
+  
+  -- Task Commands:
+  !add_task <task>        : Add a new task.
+  !mark_done <task_number>: Mark a task as completed.
+  !sort_tasks             : Sort tasks by due date.
+  !edit_task <task_number> <new_task>
+                          : Edit a task.
+  !change_date <task_number> <new_due_date>
+                          : Change a task's due date.
+  !show_tasks             : Display all tasks.
+  
+  -- Class Commands:
+  !add_class <subject> <day> <start_time> <end_time> [details]
+                          : Add a new class to your weekly schedule.
+  !view_classes [day]     : View all scheduled classes or filter by day (e.g., !view_classes Monday).
+  
+  -- Miscellaneous:
+  !clear                  : Clear terminal output.
+  !date                   : Show current date and time.
+  !quote                  : Display a random quote.
+  !calc <expression>      : Perform a calculation.
+  !rickroll               : Rickroll yourself.
+  !neofetch               : Display system information.
+  !help [category]        : Display help for a specific category (sessions, tasks, classes).
+  `;
+          typeText(outputDiv, helpText);
+        } else {
+          const category = parts[1].toLowerCase();
+          if (category === "sessions") {
+            const helpText = `
+  Session Commands:
+  !list_sessions          : List all sessions & tasks.
+  !add_session <subject> <start_time> <end_time> [details]
+                          : Add a new session.
+  !edit_session <index> <subject> <start_time> <end_time> [details]
+                          : Edit session at given index.
+  !delete_session <index> : Delete session at given index.
+  !complete_session <index>: Mark session as complete.
+  !snooze_session <index> : Snooze session for 5 minutes.
+  !sessions               : Toggle the session creation window.
+  !clear_task <index>     : Clear a specific task.
+  `;
+            typeText(outputDiv, helpText);
+          } else if (category === "tasks") {
+            const helpText = `
+  Task Commands:
+  !add_task <task>        : Add a new task.
+  !mark_done <task_number>: Mark a task as completed.
+  !sort_tasks             : Sort tasks by due date.
+  !edit_task <task_number> <new_task>
+                          : Edit a task.
+  !change_date <task_number> <new_due_date>
+                          : Change a task's due date.
+  !show_tasks             : Display all tasks.
+  `;
+            typeText(outputDiv, helpText);
+          } else if (category === "classes") {
+            const helpText = `
+  Class Commands:
+  !add_class <subject> <day> <start_time> <end_time> [details]
+                          : Add a new class to your weekly schedule.
+  !view_classes [day]     : View all scheduled classes or filter by day.
+  `;
+            typeText(outputDiv, helpText);
+          } else {
+            typeText(outputDiv, "Invalid help category. Available categories: sessions, tasks, classes.\n");
+          }
+        }
+      }
+      // New Class Commands:
+      else if (command.startsWith("!add_class")) {
+        // Format: !add_class <subject> <day> <start_time> <end_time> [details]
+        const parts = command.split(" ");
+        if (parts.length < 5) {
+          typeText(outputDiv, "Usage: !add_class <subject> <day> <start_time> <end_time> [details]\n");
+        } else {
+          const subject = parts[1];
+          const day = parts[2];
+          const startTime = parts[3];
+          const endTime = parts[4];
+          const details = parts.slice(5).join(" ");
+          const newClass = {
+            id: Date.now().toString(),
+            subject: subject,
+            day: day,
+            startTime: startTime,
+            endTime: endTime,
+            details: details,
+            notifiedDate: null
+          };
+          let classes = loadClasses();
+          classes.push(newClass);
+          saveClasses(classes);
+          typeText(outputDiv, "Class added to your weekly schedule.\n");
+        }
+      }
+      else if (command.startsWith("!view_classes")) {
+        let classes = loadClasses();
+        const parts = command.split(" ");
+        if (parts.length === 2) {
+          const filterDay = parts[1];
+          classes = classes.filter(cls => cls.day.toLowerCase() === filterDay.toLowerCase());
+          if (classes.length === 0) {
+            typeText(outputDiv, `No classes scheduled for ${filterDay}.\n`);
+            return;
+          }
+        }
+        let output = "Scheduled Classes:\n";
+        classes.forEach((cls, index) => {
+          output += `${index + 1}: ${cls.subject} on ${cls.day} from ${cls.startTime} to ${cls.endTime}${cls.details ? " (" + cls.details + ")" : ""}\n`;
+        });
+        typeText(outputDiv, output);
+      }
+      else {
         typeText(outputDiv, `Invalid command. Try again. Use !help\n`);
       }
       renderTable();
@@ -658,7 +817,7 @@ Available Commands:
         this.focus();
       }
     });
-
+  
     /* ---------- Session Creation & Running Session Indicator ---------- */
     function toggleSessionCreationModal() {
       const modal = document.getElementById('sessionModal');
@@ -707,7 +866,7 @@ Available Commands:
       toggleSessionCreationModal();
     });
     document.getElementById('closeSessionModal').addEventListener('click', toggleSessionCreationModal);
-
+  
     /* ---------- Running Session Indicator ---------- */
     function updateRunningSessionIndicator() {
       const indicator = document.getElementById("runningSessionIndicator");
@@ -753,7 +912,9 @@ Available Commands:
     }
     setInterval(updateAllTimers, 1000);
     setInterval(checkNotifications, 60000);
-
+    // New interval for checking class notifications:
+    setInterval(checkClassNotifications, 60000);
+  
     /* ---------- Notification Checker ---------- */
     function checkNotifications() {
       let sessions = loadSessions();
@@ -783,6 +944,6 @@ Available Commands:
       });
     }
   </script>
-  <datalist id="suggestions"></datalist>
+  
 </body>
 </html>
