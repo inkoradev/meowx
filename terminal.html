@@ -584,6 +584,10 @@
         } catch (e) {
           typeText(outputDiv, `Invalid expression. Use: !calc <expression>\n`);
         }
+        } else if (command === "!notes") {
+          window.open('https://inkoradev.github.io/meowx/notes.html');
+          typeText(outputDiv, `Woah Notes ? You are super productive today !\n`);        
+        
       } else if (command === "!rickroll") {
         window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
         typeText(outputDiv, `Never gonna give you up...\n`);
