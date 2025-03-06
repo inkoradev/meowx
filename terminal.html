@@ -642,6 +642,12 @@ body.terminal-mode .session-modal-content {
           }
         }
       }
+        else if (command === "!clear_all_tasks") {
+  todoList = [];
+  saveTodoList();
+  typeText(outputDiv, "All tasks cleared.\n");
+}
+
       // Task and Miscellaneous Commands:
       else if (command.startsWith("!add_task")) {
         const taskName = command.split(/ (.+)/)[1];
