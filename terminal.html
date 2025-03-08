@@ -994,34 +994,43 @@ body.terminal-mode .session-modal-content {
     setInterval(checkClassNotifications, 60000);
   
     /* ---------- Notification Checker ---------- */
-    function checkNotifications() {
-      let sessions = loadSessions();
-      const now = new Date();
-      sessions.forEach(session => {
-        let start = new Date(`${session.date}T${session.startTime}:00`);
-        let end = new Date(`${session.date}T${session.endTime}:00`);
-        if (timeStringToMinutes(session.endTime) <= timeStringToMinutes(session.startTime)) {
-          end.setDate(end.getDate() + 1);
-        }
-        if (session.snoozedUntil) {
-          const snoozeTime = new Date(session.snoozedUntil);
-          if (now < snoozeTime) return;
-          else session.snoozedUntil = null;
-        }
-        const diffMinutes = (start - now) / 60000;
-        if (diffMinutes > 0 && diffMinutes <= 5 && !session.notified && !session.completed) {
-          if (Notification.permission === "granted") {
-            new Notification("Upcoming Session", {
-              body: `${session.subject} starts at ${session.startTime}.`,
-              icon: "https://via.placeholder.com/128"
-            });
-          }
-          session.notified = true;
-          saveSessions(sessions);
-        }
-      });
+   function checkNotifications() {
+  let sessions = loadSessions();
+  const now = new Date();
+
+  sessions.forEach(session => {
+    let start = new Date(`${session.date}T${session.startTime}:00`);
+    let end = new Date(`${session.date}T${session.endTime}:00`);
+
+    // Adjust end time if the session spans midnight
+    if (timeStringToMinutes(session.endTime) <= timeStringToMinutes(session.startTime)) {
+      end.setDate(end.getDate() + 1);
     }
-  </script>
+
+    // Skip sessions that are snoozed until a later time
+    if (session.snoozedUntil) {
+      const snoozeTime = new Date(session.snoozedUntil);
+      if (now < snoozeTime) return;
+      else session.snoozedUntil = null;
+    }
+
+    // Calculate minutes difference between now and the session's start time
+    const diffMinutes = (start - now) / 60000;
+
+    // If the session is about to start within 5 minutes and hasn't been notified or completed
+    if (diffMinutes > 0 && diffMinutes <= 5 && !session.notified && !session.completed) {
+      if (Notification.permission === "granted") {
+        new Notification("Upcoming Session", {
+          body: `${session.subject} starts at ${session.startTime}.`,
+          icon: "https://via.placeholder.com/128"
+        });
+      }
+      session.notified = true;
+      saveSessions(sessions);
+    }
+  });
+}
+
   
 </body>
 </html>
