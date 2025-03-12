@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://i.ibb.co/7dG2Z8yk/lama-logo-removebg-preview.png">
+  <title>Lama Journal</title>
+  <!-- Import Comfortaa font for the sidebar and UI -->
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #0d0d0e;
+      color: #f1f1f1;
+      font-family: 'Comfortaa', sans-serif;
+    }
+    /* Fixed toggle button – always visible */
+    .toggle-btn {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1100;
+      background: none;
+      border: none;
+      color: #f1f1f1;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    /* Sidebar container – fixed, full height, slides off-screen when collapsed */
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100%;
+      background-color: #202123;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+    /* When collapsed, slide sidebar completely off-screen */
+    #sidebar.collapsed {
+      transform: translateX(-100%);
+    }
+    /* Sidebar header: add left margin so that title doesn't overlap the toggle button */
+    .sidebar-header {
+      padding: 15px;
+      border-bottom: 1px solid #3a3d45;
+    }
+    .sidebar-title {
+      font-size: 18px;
+      white-space: nowrap;
+      margin-left: 40px; /* extra margin so text doesn't go under toggle */
+    }
+    /* Sidebar Add Folder Section at Top */
+    .sidebar-add {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #3a3d45;
+    }
+    .sidebar-add button {
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .sidebar-add button svg {
+      width: 24px;
+      height: 24px;
+      fill: #007aff;
+      transition: fill 0.2s;
+    }
+    .sidebar-add button:hover svg {
+      fill: #005bb5;
+    }
+    /* Folder List Styles */
+    .folder-list {
+      padding: 10px;
+    }
+    .folder-item {
+      padding: 8px 10px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      transition: background 0.2s;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+    .folder-item:hover {
+      background-color: #222327;
+    }
+    .folder-item.active {
+      background-color: #202123;
+    }
+    .folder-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .folder-info {
+      display: flex;
+      align-items: center;
+    }
+    .folder-icon {
+      margin-right: 8px;
+    }
+    .folder-name {
+      white-space: nowrap;
+      cursor: default;
+    }
+    /* Pencil icon for folder – visible on hover */
+    .edit-folder {
+      visibility: hidden;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    .folder-header:hover .edit-folder {
+      visibility: visible;
+    }
+    /* Nested notes container with a left border */
+    .notes-container {
+      margin-top: 4px;
+      margin-left: 10px;
+      padding-left: 8px;
+      border-left: 2px solid #007aff;
+    }
+    .note-item {
+      padding: 4px 8px;
+      margin-bottom: 3px;
+      border-radius: 4px;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .note-item:hover {
+      background-color: #2a2c33;
+    }
+    .note-item.active {
+      background-color: #313235;
+    }
+    .note-icon {
+      margin-right: 6px;
+    }
+    .note-title {
+      white-space: nowrap;
+      cursor: default;
+    }
+    /* Pencil icon for note – visible on hover */
+    .edit-note {
+      visibility: hidden;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    .note-item:hover .edit-note {
+      visibility: visible;
+    }
+    /* Main Workspace Styles */
+    #mainContent {
+      margin-left: 250px;
+      transition: margin-left 0.3s ease;
+      padding: 20px;
+    }
+    /* When sidebar is collapsed, main content takes full width */
+    #sidebar.collapsed ~ #mainContent {
+      margin-left: 0;
+    }
+    .workspace-header {
+      padding: 20px;
+      border-bottom: 1px solid #3a3d45;
+    }
+    .workspace-header input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: #f1f1f1;
+      font-size: 20px;
+      outline: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .workspace-body {
+      padding: 10px;
+    }
+    /* Note content area as a contenteditable div */
+    #noteContent {
+      width: 100%;
+      height: calc(100vh - 100px);
+      border: 1px solid #3a3d45;
+      border-radius: 4px;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #1c1c1f;
+      color: #f1f1f1;
+      outline: none;
+      overflow-y: auto;
+      line-height: 1.6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    /* Headings in noteContent get extra margin */
+    #noteContent h1,
+    #noteContent h2,
+    #noteContent h3 {
+      margin: 0.5em 0;
+    }
+    /* Context Menu Styles */
+    .context-menu {
+      position: absolute;
+      background-color: #202123;
+      border: 1px solid #3a3d45;
+      border-radius: 4px;
+      display: none;
+      z-index: 1200;
+      width: 150px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+    .context-menu ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .context-menu li {
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+      color: #f1f1f1;
+    }
+    .context-menu li:hover {
+      background-color: #2a2c33;
+    }
+    /* Inline editing input style */
+    .inline-edit {
+      width: 100%;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: inherit;
+    }
+    /* Custom Scrollbar Styles */
+    /* For WebKit browsers (Chrome, Safari, Edge) */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #2a2c33;
+      border-radius: 50px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #007aff;
+      border-radius: 100px;
+      border: 2px solid #2a2c33;
+    }
+    /* For Firefox */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #26405c #2a2c33;
+    }
+  </style>
+</head>
+<body>
+  <!-- Fixed toggle button (always visible) -->
+  <button id="toggleSidebar" class="toggle-btn">&#9776;</button>
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Beryl</span>
+    </div>
+    <!-- Add Folder Icon at Top of Sidebar -->
+    <div class="sidebar-add">
+      <button id="addFolderBtn" title="Add Folder">
+        <!-- Plus Icon SVG -->
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="white" width="24" height="24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+    </div>
+    <div class="folder-list" id="folderList">
+      <!-- Folders with nested notes will be rendered here -->
+    </div>
+  </div>
+  <!-- Main Workspace -->
+  <div id="mainContent" class="main-content">
+    <div class="workspace-header">
+      <input id="noteTitle" type="text" placeholder="Note Title" readonly />
+    </div>
+    <div class="workspace-body">
+      <div id="noteContent" contenteditable="true"></div>
+    </div>
+  </div>
+  <!-- Context Menus -->
+  <div id="folderContextMenu" class="context-menu">
+    <ul>
+      <li id="addNoteFolder">Add Note</li>
+      <li id="renameFolder">Rename Folder</li>
+      <li id="deleteFolder">Delete Folder</li>
+    </ul>
+  </div>
+  <div id="noteContextMenu" class="context-menu">
+    <ul>
+      <li id="renameNote">Rename Note</li>
+      <li id="deleteNote">Delete Note</li>
+    </ul>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let data = { folders: [] };
+      let currentFolderId = null;
+      let currentNoteId = null;
+      
+      // SVG Icons
+      const folderIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h4l2 3h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3V7z"/>
+        </svg>`;
+      const noteIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h10M7 11h10M7 15h10"/>
+        </svg>`;
+      const arrowDownSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>`;
+      const arrowRightSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>`;
+      const pencilIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4h2M12 2v2zm6.364 2.636l1.414 1.414M18 12h2M4.636 7.05l1.414 1.414M2 12h2m-2 0v2m2.636 4.95l1.414-1.414M12 18h2m0 0v2m0-2h-2"/>
+        </svg>`;
+      
+      const toggleSidebarBtn = document.getElementById('toggleSidebar');
+      const sidebar = document.getElementById('sidebar');
+      const folderList = document.getElementById('folderList');
+      const noteContent = document.getElementById('noteContent');
+      const noteTitle = document.getElementById('noteTitle');
+      
+      const folderContextMenu = document.getElementById('folderContextMenu');
+      const noteContextMenu = document.getElementById('noteContextMenu');
+      
+      const addFolderBtn = document.getElementById('addFolderBtn');
+      
+      // Load and save data in localStorage
+      function loadData() {
+        const storedData = localStorage.getItem('lamaData');
+        if (storedData) data = JSON.parse(storedData);
+      }
+      function saveData() {
+        localStorage.setItem('lamaData', JSON.stringify(data));
+      }
+      
+      // Inline editing helper: replaces a span with an input and restores it on blur/Enter.
+      function inlineEdit(spanEl, dataObj, type) {
+        const currentText = spanEl.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentText;
+        input.classList.add('inline-edit');
+        spanEl.replaceWith(input);
+        input.focus();
+        input.select();
+        input.addEventListener('blur', finishEdit);
+        input.addEventListener('keydown', (e) => { if(e.key === 'Enter') finishEdit(); });
+        function finishEdit() {
+          const newText = input.value.trim() || currentText;
+          if (type === 'folder') dataObj.name = newText;
+          else if (type === 'note') {
+            dataObj.title = newText;
+            if (currentNoteId === dataObj.id) noteTitle.value = newText;
+          }
+          const newSpan = document.createElement('span');
+          newSpan.className = type === 'folder' ? 'folder-name' : 'note-title';
+          newSpan.textContent = newText;
+          newSpan.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            inlineEdit(newSpan, dataObj, type);
+          });
+          input.replaceWith(newSpan);
+          saveData();
+          renderFolders();
+        }
+      }
+      
+      // Render folders and nested notes
+      function renderFolders() {
+        folderList.innerHTML = '';
+        data.folders.forEach(folder => {
+          const folderDiv = document.createElement('div');
+          folderDiv.classList.add('folder-item');
+          folderDiv.dataset.id = folder.id;
+          if (folder.id === currentFolderId) folderDiv.classList.add('active');
+          
+          // Folder header
+          const folderHeader = document.createElement('div');
+          folderHeader.classList.add('folder-header');
+          
+          const toggleArrow = document.createElement('span');
+          toggleArrow.classList.add('toggle-folder');
+          toggleArrow.innerHTML = folder.expanded ? arrowDownSVG : arrowRightSVG;
+          toggleArrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            folder.expanded = !folder.expanded;
+            saveData();
+            renderFolders();
+          });
+          
+          const folderInfo = document.createElement('span');
+          folderInfo.classList.add('folder-info');
+          
+          const folderIconEl = document.createElement('span');
+          folderIconEl.classList.add('folder-icon');
+          folderIconEl.innerHTML = folderIconSVG;
+          
+          const folderNameSpan = document.createElement('span');
+          folderNameSpan.classList.add('folder-name');
+          folderNameSpan.textContent = folder.name;
+          folderNameSpan.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            inlineEdit(folderNameSpan, folder, 'folder');
+          });
+          
+          folderInfo.appendChild(folderIconEl);
+          folderInfo.appendChild(folderNameSpan);
+          
+          // Pencil icon for folder (shows context menu with Rename option)
+          const editFolderIcon = document.createElement('span');
+          editFolderIcon.classList.add('edit-folder');
+          editFolderIcon.innerHTML = pencilIconSVG;
+          editFolderIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentFolderId = folder.id;
+            showContextMenu(folderContextMenu, e.pageX, e.pageY);
+          });
+          
+          folderHeader.appendChild(toggleArrow);
+          folderHeader.appendChild(folderInfo);
+          folderHeader.appendChild(editFolderIcon);
+          
+          folderHeader.addEventListener('click', () => {
+            currentFolderId = folder.id;
+            currentNoteId = null;
+            noteTitle.value = "";
+            noteContent.innerHTML = "";
+            renderFolders();
+          });
+          folderHeader.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            currentFolderId = folder.id;
+            showContextMenu(folderContextMenu, e.pageX, e.pageY);
+          });
+          folderDiv.appendChild(folderHeader);
+          
+          // Render nested notes if folder is expanded
+          if (folder.expanded) {
+            const notesContainer = document.createElement('div');
+            notesContainer.classList.add('notes-container');
+            folder.notes.forEach(note => {
+              const noteDiv = document.createElement('div');
+              noteDiv.classList.add('note-item');
+              noteDiv.dataset.id = note.id;
+              if (note.id === currentNoteId) noteDiv.classList.add('active');
+              
+              const noteIconEl = document.createElement('span');
+              noteIconEl.classList.add('note-icon');
+              noteIconEl.innerHTML = noteIconSVG;
+              
+              const noteTitleSpan = document.createElement('span');
+              noteTitleSpan.classList.add('note-title');
+              noteTitleSpan.textContent = note.title;
+              noteTitleSpan.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                inlineEdit(noteTitleSpan, note, 'note');
+              });
+              
+              const editNoteIcon = document.createElement('span');
+              editNoteIcon.classList.add('edit-note');
+              editNoteIcon.innerHTML = pencilIconSVG;
+              editNoteIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentFolderId = folder.id;
+                currentNoteId = note.id;
+                showContextMenu(noteContextMenu, e.pageX, e.pageY);
+              });
+              
+              noteDiv.appendChild(noteIconEl);
+              noteDiv.appendChild(noteTitleSpan);
+              noteDiv.appendChild(editNoteIcon);
+              
+              noteDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentFolderId = folder.id;
+                currentNoteId = note.id;
+                noteTitle.value = note.title;
+                noteContent.innerHTML = note.content;
+                renderFolders();
+              });
+              noteDiv.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                currentFolderId = folder.id;
+                currentNoteId = note.id;
+                showContextMenu(noteContextMenu, e.pageX, e.pageY);
+              });
+              
+              notesContainer.appendChild(noteDiv);
+            });
+            folderDiv.appendChild(notesContainer);
+          }
+          folderList.appendChild(folderDiv);
+        });
+      }
+      
+      // Show context menu at specified coordinates
+      function showContextMenu(menu, x, y) {
+        menu.style.top = y + "px";
+        menu.style.left = x + "px";
+        menu.style.display = "block";
+      }
+      function hideContextMenus() {
+        folderContextMenu.style.display = "none";
+        noteContextMenu.style.display = "none";
+      }
+      
+      // Context menu for folder actions
+      document.getElementById('addNoteFolder').addEventListener('click', () => {
+        if (!currentFolderId) return;
+        const noteTitleInput = prompt("Enter note title:");
+        if (noteTitleInput) {
+          const folder = data.folders.find(f => f.id === currentFolderId);
+          const newNote = { id: Date.now().toString(), title: noteTitleInput, content: "" };
+          folder.notes.push(newNote);
+          folder.expanded = true;
+          saveData();
+          renderFolders();
+        }
+        hideContextMenus();
+      });
+      document.getElementById('renameFolder').addEventListener('click', () => {
+        if (!currentFolderId) return;
+        let folderEl = [...document.querySelectorAll('.folder-item')].find(el => el.dataset.id === currentFolderId);
+        if (folderEl) {
+          let nameSpan = folderEl.querySelector('.folder-name');
+          if (nameSpan) inlineEdit(nameSpan, data.folders.find(f => f.id === currentFolderId), 'folder');
+        }
+        hideContextMenus();
+      });
+      document.getElementById('deleteFolder').addEventListener('click', () => {
+        if (!currentFolderId) return;
+        if (confirm("Are you sure you want to delete this folder?")) {
+          data.folders = data.folders.filter(f => f.id !== currentFolderId);
+          currentFolderId = null;
+          currentNoteId = null;
+          noteTitle.value = "";
+          noteContent.innerHTML = "";
+          saveData();
+          renderFolders();
+        }
+        hideContextMenus();
+      });
+      
+      // Context menu for note actions
+      document.getElementById('renameNote').addEventListener('click', () => {
+        if (!currentFolderId || !currentNoteId) return;
+        let noteEl = [...document.querySelectorAll('.note-item')].find(el => el.dataset.id === currentNoteId);
+        if (noteEl) {
+          let titleSpan = noteEl.querySelector('.note-title');
+          if (titleSpan) {
+            let folder = data.folders.find(f => f.id === currentFolderId);
+            let note = folder.notes.find(n => n.id === currentNoteId);
+            inlineEdit(titleSpan, note, 'note');
+          }
+        }
+        hideContextMenus();
+      });
+      document.getElementById('deleteNote').addEventListener('click', () => {
+        if (!currentFolderId || !currentNoteId) return;
+        if (confirm("Are you sure you want to delete this note?")) {
+          const folder = data.folders.find(f => f.id === currentFolderId);
+          folder.notes = folder.notes.filter(n => n.id !== currentNoteId);
+          currentNoteId = null;
+          noteTitle.value = "";
+          noteContent.innerHTML = "";
+          saveData();
+          renderFolders();
+        }
+        hideContextMenus();
+      });
+      
+      // Hide context menus when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.context-menu')) hideContextMenus();
+      });
+      
+      // Collapsing sidebar: clicking toggle button adds/removes "collapsed" class
+      toggleSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.toggle("collapsed");
+      });
+      
+      // Workspace: Heading Transformation
+      noteContent.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+          setTimeout(() => {
+            let sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+              let range = sel.getRangeAt(0);
+              let currentBlock = range.startContainer;
+              if (currentBlock.nodeType === Node.TEXT_NODE) {
+                currentBlock = currentBlock.parentNode;
+              }
+              if (currentBlock && currentBlock.textContent) {
+                let match = currentBlock.textContent.match(/^(#{1,3})\s+(.*)/);
+                if (match) {
+                  let level = match[1].length;
+                  let headingText = match[2];
+                  let heading = document.createElement(level === 1 ? "h1" : level === 2 ? "h2" : "h3");
+                  heading.textContent = headingText;
+                  heading.style.transition = "opacity 0.5s ease";
+                  heading.style.opacity = "0";
+                  currentBlock.parentNode.replaceChild(heading, currentBlock);
+                  setTimeout(() => { heading.style.opacity = "1"; }, 10);
+                  let p = document.createElement("p");
+                  p.innerHTML = "<br>";
+                  heading.parentNode.insertBefore(p, heading.nextSibling);
+                  let newRange = document.createRange();
+                  newRange.setStart(p, 0);
+                  newRange.collapse(true);
+                  sel.removeAllRanges();
+                  sel.addRange(newRange);
+                  updateCurrentNoteContent();
+                }
+              }
+            }
+          }, 0);
+        }
+      });
+      
+      function updateCurrentNoteContent() {
+        if (!currentFolderId || !currentNoteId) return;
+        const folder = data.folders.find(f => f.id === currentFolderId);
+        const note = folder.notes.find(n => n.id === currentNoteId);
+        note.content = noteContent.innerHTML;
+        saveData();
+      }
+      
+      noteContent.addEventListener("input", updateCurrentNoteContent);
+      
+      // Add Folder Button Event (now at top of sidebar as an icon)
+      addFolderBtn.addEventListener("click", () => {
+        const folderName = prompt("Enter folder name:");
+        if (folderName) {
+          const newFolder = {
+            id: Date.now().toString(),
+            name: folderName,
+            expanded: true,
+            notes: []
+          };
+          data.folders.push(newFolder);
+          saveData();
+          renderFolders();
+        }
+      });
+      
+      // For demo: if no folders exist, add a sample folder and note
+      if (!localStorage.getItem("lamaData")) {
+        data.folders.push({
+          id: Date.now().toString(),
+          name: "My Folder",
+          expanded: true,
+          notes: [
+            { id: Date.now().toString() + "_n", title: "Sample Note", content: "<p>This is a sample note.</p>" }
+          ]
+        });
+        saveData();
+      }
+      
+      loadData();
+      renderFolders();
+    });
+  </script>
+</body>
+</html>
